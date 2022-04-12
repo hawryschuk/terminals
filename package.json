@@ -1,0 +1,72 @@
+{
+  "name": "@hawryschuk/terminal-restapi",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.ts",
+  "bin": {
+    "restaurant-reviews": "./index.ts"
+  },
+  "scripts": {
+    "hawryschuk": "npm link @hawryschuk/common @hawryschuk/dao @hawryschuk/dao-aws @hawryschuk/resource-locking",
+    "postinstall": "npm run hawryschuk",
+    "test": "ts-mocha *.spec.ts --exclude client.spec.ts --timeout=15000",
+    "posttest": "npm run build",
+    "build": "tsc --outDir dist",
+    "start": "nodemon --ignore ./dist/**/* --ext ts --exec npm t",
+    "start:server1": "nodemon --ext ts --exec \"npm t && ts-node cli --port=8001\"",
+    "start:server": "nodemon --ext ts --exec \" ts-node cli --port=8001\"",
+    "start:app-over-restapi1": "nodemon --ext ts --exec \"npm t && ts-node cli --baseuri=http://localhost:8001\"",
+    "start:app-over-restapi": "nodemon --ext ts --exec \"ts-node cli --baseuri=http://localhost:8001\"",
+    "test:server": "nodemon --ext npm t && ts --exec ts-mocha client.spec.ts --timeout=15000",
+    "build:layers": "npm run build:layer1 && npm run build:layer2 && npm run build:layer3",
+    "build:layer1": "npm run build:layer1:part1 && npm run build:layer1:part2 && npm run build:layer1:part3 && npm run build:layer1:part4",
+    "build:layer1:part1": "zip -q -r ../terminal-layer1.zip node_modules -x node_modules/aws-sdk node_modules/@hawryschuk",
+    "build:layer1:part2": "aws s3 cp ../terminal-layer1.zip s3://terminal-restapi",
+    "build:layer1:part3": "aws lambda publish-layer-version --layer-name terminal-layer1 --content S3Bucket=terminal-restapi,S3Key=terminal-layer1.zip --compatible-runtimes nodejs14.x",
+    "build:layer1:part4": "ts-node cli.ts --update-layers",
+    "build:layer2": "npm run build:layer2:part1 && npm run build:layer2:part2 && npm run build:layer2:part3 && npm run build:layer2:part4",
+    "build:layer2:part1": "zip -q -r ../terminal-layer2.zip node_modules/@hawryschuk",
+    "build:layer2:part2": "aws s3 cp ../terminal-layer2.zip s3://terminal-restapi",
+    "build:layer2:part3": "aws lambda publish-layer-version --layer-name terminal-layer2 --content S3Bucket=terminal-restapi,S3Key=terminal-layer2.zip --compatible-runtimes nodejs14.x",
+    "build:layer2:part4": "ts-node cli.ts --update-layers",
+    "prebuild:layer3": "npm run build",
+    "build:layer3": "cd dist && zip -q ../../terminal.zip * && cd ../.. && aws lambda update-function-code --function-name terminals1 --zip-file fileb://terminal.zip && aws lambda update-function-code --function-name terminals2 --zip-file fileb://terminal.zip"
+  },
+  "author": "Alex Hawryschuk",
+  "license": "UNLICENSED",
+  "peerDependencies": {
+    "aws-sdk": "^2.941.0"
+  },
+  "dependencies": {
+    "aws-serverless-express": "^3.4.0",
+    "body-parser": "^1.19.0",
+    "cors": "^2.8.5",
+    "deep-equal": "^2.0.5",
+    "express": "^4.17.1",
+    "jwt-simple": "^0.5.6",
+    "axios": "^0.21.1",
+    "prompts": "^2.4.1",
+    "rxjs": "^7.2.0",
+    "socket.io": "^4.1.2",
+    "socket.io-client": "^4.1.2",
+    "tslib": "^2.2.0",
+    "typescript": "^4.2.4"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.2.21",
+    "@types/chai-http": "^4.2.0",
+    "@types/expect": "^24.3.0",
+    "@types/express": "^4.17.11",
+    "@types/mocha": "^8.2.3",
+    "@types/node": "^14.17.5",
+    "@types/prompts": "^2.0.13",
+    "@types/socket.io": "^3.0.2",
+    "@types/socket.io-client": "^3.0.0",
+    "aws-sdk": "^2.943.0",
+    "chai": "^4.3.4",
+    "chai-http": "^4.3.0",
+    "mocha": "^8.3.2",
+    "nodemon": "^2.0.7",
+    "ts-mocha": "^8.0.0"
+  }
+}
