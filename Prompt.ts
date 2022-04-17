@@ -9,4 +9,5 @@ export interface Prompt {
     choices?: { title: string; value: any; disabled?: boolean; description?: string; }[];
     resolve?: any;
     resolved?: any;
+    clobber?: boolean;
 }

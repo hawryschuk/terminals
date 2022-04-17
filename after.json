@@ -1,0 +1,2423 @@
+[
+  [
+    {
+      "type": "stdout",
+      "message": "welcome to table service"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "text",
+        "name": "name",
+        "message": "what is your name",
+        "initial": "alex",
+        "resolved": "im player 1"
+      }
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "service",
+        "message": "which service",
+        "choices": [
+          {
+            "title": "spades",
+            "value": "spades"
+          }
+        ],
+        "resolved": "spades"
+      }
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "action",
+        "message": "what action",
+        "choices": [
+          {
+            "title": "ready",
+            "value": "ready",
+            "disabled": true
+          },
+          {
+            "title": "sit",
+            "value": "sit",
+            "disabled": true
+          },
+          {
+            "title": "stand",
+            "value": "stand",
+            "disabled": true
+          },
+          {
+            "title": "join-table",
+            "value": "join-table",
+            "disabled": false
+          },
+          {
+            "title": "invite-robot",
+            "value": "invite-robot",
+            "disabled": true
+          },
+          {
+            "title": "boot-robot",
+            "value": "boot-robot",
+            "disabled": true
+          },
+          {
+            "title": "leave-table",
+            "value": "leave-table",
+            "disabled": true
+          },
+          {
+            "title": "respond-to-service-terminal",
+            "value": "respond-to-service-terminal",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-lounge",
+            "value": "send-chat-lounge",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-table",
+            "value": "send-chat-table",
+            "disabled": true
+          },
+          {
+            "title": "list-tables",
+            "value": "list-tables"
+          },
+          {
+            "title": "refresh",
+            "value": "refresh"
+          },
+          {
+            "title": "quit",
+            "value": "quit"
+          }
+        ],
+        "resolved": "join-table"
+      }
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "table",
+        "message": "which table",
+        "choices": [
+          {
+            "title": "89c23e0e140b2a4a9e1453b77a209be5",
+            "value": 1
+          },
+          {
+            "title": "7282ca0a6eb73e8e1ea2e7d8b689d8c7",
+            "value": 2
+          }
+        ],
+        "resolved": 2
+      }
+    },
+    {
+      "type": "stdout",
+      "message": "state: take-seat"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "action",
+        "message": "what action",
+        "choices": [
+          {
+            "title": "ready",
+            "value": "ready",
+            "disabled": true
+          },
+          {
+            "title": "sit",
+            "value": "sit",
+            "disabled": false
+          },
+          {
+            "title": "stand",
+            "value": "stand",
+            "disabled": true
+          },
+          {
+            "title": "join-table",
+            "value": "join-table",
+            "disabled": true
+          },
+          {
+            "title": "invite-robot",
+            "value": "invite-robot",
+            "disabled": false
+          },
+          {
+            "title": "boot-robot",
+            "value": "boot-robot",
+            "disabled": true
+          },
+          {
+            "title": "leave-table",
+            "value": "leave-table",
+            "disabled": false
+          },
+          {
+            "title": "respond-to-service-terminal",
+            "value": "respond-to-service-terminal",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-lounge",
+            "value": "send-chat-lounge",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-table",
+            "value": "send-chat-table",
+            "disabled": false
+          },
+          {
+            "title": "list-tables",
+            "value": "list-tables"
+          },
+          {
+            "title": "refresh",
+            "value": "refresh"
+          },
+          {
+            "title": "quit",
+            "value": "quit"
+          }
+        ],
+        "resolved": "sit"
+      }
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "seat",
+        "message": "which seat",
+        "choices": [
+          {
+            "disabled": false,
+            "title": "seat 1",
+            "value": 1
+          },
+          {
+            "disabled": false,
+            "title": "seat 2",
+            "value": 2
+          },
+          {
+            "disabled": false,
+            "title": "seat 3",
+            "value": 3
+          },
+          {
+            "disabled": false,
+            "title": "seat 4",
+            "value": 4
+          }
+        ],
+        "resolved": 1
+      }
+    },
+    {
+      "type": "stdout",
+      "message": "state: be-ready"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "action",
+        "message": "what action",
+        "choices": [
+          {
+            "title": "ready",
+            "value": "ready",
+            "disabled": false
+          },
+          {
+            "title": "sit",
+            "value": "sit",
+            "disabled": true
+          },
+          {
+            "title": "stand",
+            "value": "stand",
+            "disabled": false
+          },
+          {
+            "title": "join-table",
+            "value": "join-table",
+            "disabled": true
+          },
+          {
+            "title": "invite-robot",
+            "value": "invite-robot",
+            "disabled": true
+          },
+          {
+            "title": "boot-robot",
+            "value": "boot-robot",
+            "disabled": true
+          },
+          {
+            "title": "leave-table",
+            "value": "leave-table",
+            "disabled": true
+          },
+          {
+            "title": "respond-to-service-terminal",
+            "value": "respond-to-service-terminal",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-lounge",
+            "value": "send-chat-lounge",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-table",
+            "value": "send-chat-table",
+            "disabled": false
+          },
+          {
+            "title": "list-tables",
+            "value": "list-tables"
+          },
+          {
+            "title": "refresh",
+            "value": "refresh"
+          },
+          {
+            "title": "quit",
+            "value": "quit"
+          }
+        ],
+        "resolved": "ready"
+      }
+    },
+    {
+      "type": "stdout",
+      "message": "serviceInstance has started"
+    },
+    {
+      "type": "stdout",
+      "message": "state: use-service"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "action",
+        "message": "what action",
+        "choices": [
+          {
+            "title": "ready",
+            "value": "ready",
+            "disabled": true
+          },
+          {
+            "title": "sit",
+            "value": "sit",
+            "disabled": true
+          },
+          {
+            "title": "stand",
+            "value": "stand",
+            "disabled": false
+          },
+          {
+            "title": "join-table",
+            "value": "join-table",
+            "disabled": true
+          },
+          {
+            "title": "invite-robot",
+            "value": "invite-robot",
+            "disabled": true
+          },
+          {
+            "title": "boot-robot",
+            "value": "boot-robot",
+            "disabled": true
+          },
+          {
+            "title": "leave-table",
+            "value": "leave-table",
+            "disabled": true
+          },
+          {
+            "title": "respond-to-service-terminal",
+            "value": "respond-to-service-terminal",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-lounge",
+            "value": "send-chat-lounge",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-table",
+            "value": "send-chat-table",
+            "disabled": false
+          },
+          {
+            "title": "list-tables",
+            "value": "list-tables"
+          },
+          {
+            "title": "refresh",
+            "value": "refresh"
+          },
+          {
+            "title": "quit",
+            "value": "quit"
+          }
+        ],
+        "resolved": "refresh"
+      }
+    },
+    {
+      "type": "stdout",
+      "message": "im player 3 (#3) bids 3"
+    },
+    {
+      "type": "stdout",
+      "message": "im player 4 (#4) bids 3"
+    },
+    {
+      "type": "stdout",
+      "message": "im player 1 (#1), here are your cards: hearts(Queen, 10, 5, 4), diamonds(King, Queen, 8, 2), clubs(Jack, 5, 3), spades(7, 4)"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "message": "im player 1, how many books do you bid?",
+        "type": "number",
+        "name": "bid",
+        "min": 0,
+        "max": 13,
+        "initial": 0,
+        "resolved": 3
+      }
+    },
+    {
+      "type": "stdout",
+      "message": "im player 1 (#1) bids 3"
+    },
+    {
+      "type": "stdout",
+      "message": "state: use-service"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "action",
+        "message": "what action",
+        "choices": [
+          {
+            "title": "ready",
+            "value": "ready",
+            "disabled": true
+          },
+          {
+            "title": "sit",
+            "value": "sit",
+            "disabled": true
+          },
+          {
+            "title": "stand",
+            "value": "stand",
+            "disabled": false
+          },
+          {
+            "title": "join-table",
+            "value": "join-table",
+            "disabled": true
+          },
+          {
+            "title": "invite-robot",
+            "value": "invite-robot",
+            "disabled": true
+          },
+          {
+            "title": "boot-robot",
+            "value": "boot-robot",
+            "disabled": true
+          },
+          {
+            "title": "leave-table",
+            "value": "leave-table",
+            "disabled": true
+          },
+          {
+            "title": "respond-to-service-terminal",
+            "value": "respond-to-service-terminal",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-lounge",
+            "value": "send-chat-lounge",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-table",
+            "value": "send-chat-table",
+            "disabled": false
+          },
+          {
+            "title": "list-tables",
+            "value": "list-tables"
+          },
+          {
+            "title": "refresh",
+            "value": "refresh"
+          },
+          {
+            "title": "quit",
+            "value": "quit"
+          }
+        ],
+        "resolved": "stand"
+      }
+    },
+    {
+      "type": "stdout",
+      "message": "im player 2 (#2) bids 3"
+    },
+    {
+      "type": "stdout",
+      "message": "Bid    : G,G,G,G,G,G,_,R,R,R,R,R,R"
+    },
+    {
+      "type": "stdout",
+      "message": "serviceInstance was aborted (stand upundefined)"
+    },
+    {
+      "type": "stdout",
+      "message": "state: take-seat"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "action",
+        "message": "what action",
+        "choices": [
+          {
+            "title": "ready",
+            "value": "ready",
+            "disabled": true
+          },
+          {
+            "title": "sit",
+            "value": "sit",
+            "disabled": false
+          },
+          {
+            "title": "stand",
+            "value": "stand",
+            "disabled": true
+          },
+          {
+            "title": "join-table",
+            "value": "join-table",
+            "disabled": true
+          },
+          {
+            "title": "invite-robot",
+            "value": "invite-robot",
+            "disabled": true
+          },
+          {
+            "title": "boot-robot",
+            "value": "boot-robot",
+            "disabled": true
+          },
+          {
+            "title": "leave-table",
+            "value": "leave-table",
+            "disabled": false
+          },
+          {
+            "title": "respond-to-service-terminal",
+            "value": "respond-to-service-terminal",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-lounge",
+            "value": "send-chat-lounge",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-table",
+            "value": "send-chat-table",
+            "disabled": false
+          },
+          {
+            "title": "list-tables",
+            "value": "list-tables"
+          },
+          {
+            "title": "refresh",
+            "value": "refresh"
+          },
+          {
+            "title": "quit",
+            "value": "quit"
+          }
+        ]
+      }
+    },
+    {
+      "type": "stdout",
+      "message": "serviceInstance was aborted ([object Object]undefined)"
+    }
+  ],
+  [
+    {
+      "type": "stdout",
+      "message": "welcome to table service"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "text",
+        "name": "name",
+        "message": "what is your name",
+        "initial": "alex",
+        "resolved": "im player 2"
+      }
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "service",
+        "message": "which service",
+        "choices": [
+          {
+            "title": "spades",
+            "value": "spades"
+          }
+        ],
+        "resolved": "spades"
+      }
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "action",
+        "message": "what action",
+        "choices": [
+          {
+            "title": "ready",
+            "value": "ready",
+            "disabled": true
+          },
+          {
+            "title": "sit",
+            "value": "sit",
+            "disabled": true
+          },
+          {
+            "title": "stand",
+            "value": "stand",
+            "disabled": true
+          },
+          {
+            "title": "join-table",
+            "value": "join-table",
+            "disabled": false
+          },
+          {
+            "title": "invite-robot",
+            "value": "invite-robot",
+            "disabled": true
+          },
+          {
+            "title": "boot-robot",
+            "value": "boot-robot",
+            "disabled": true
+          },
+          {
+            "title": "leave-table",
+            "value": "leave-table",
+            "disabled": true
+          },
+          {
+            "title": "respond-to-service-terminal",
+            "value": "respond-to-service-terminal",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-lounge",
+            "value": "send-chat-lounge",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-table",
+            "value": "send-chat-table",
+            "disabled": true
+          },
+          {
+            "title": "list-tables",
+            "value": "list-tables"
+          },
+          {
+            "title": "refresh",
+            "value": "refresh"
+          },
+          {
+            "title": "quit",
+            "value": "quit"
+          }
+        ],
+        "resolved": "join-table"
+      }
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "table",
+        "message": "which table",
+        "choices": [
+          {
+            "title": "89c23e0e140b2a4a9e1453b77a209be5",
+            "value": 1
+          },
+          {
+            "title": "7282ca0a6eb73e8e1ea2e7d8b689d8c7",
+            "value": 2
+          }
+        ],
+        "resolved": 2
+      }
+    },
+    {
+      "type": "stdout",
+      "message": "state: take-seat"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "action",
+        "message": "what action",
+        "choices": [
+          {
+            "title": "ready",
+            "value": "ready",
+            "disabled": true
+          },
+          {
+            "title": "sit",
+            "value": "sit",
+            "disabled": false
+          },
+          {
+            "title": "stand",
+            "value": "stand",
+            "disabled": true
+          },
+          {
+            "title": "join-table",
+            "value": "join-table",
+            "disabled": true
+          },
+          {
+            "title": "invite-robot",
+            "value": "invite-robot",
+            "disabled": false
+          },
+          {
+            "title": "boot-robot",
+            "value": "boot-robot",
+            "disabled": true
+          },
+          {
+            "title": "leave-table",
+            "value": "leave-table",
+            "disabled": false
+          },
+          {
+            "title": "respond-to-service-terminal",
+            "value": "respond-to-service-terminal",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-lounge",
+            "value": "send-chat-lounge",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-table",
+            "value": "send-chat-table",
+            "disabled": false
+          },
+          {
+            "title": "list-tables",
+            "value": "list-tables"
+          },
+          {
+            "title": "refresh",
+            "value": "refresh"
+          },
+          {
+            "title": "quit",
+            "value": "quit"
+          }
+        ],
+        "resolved": "sit"
+      }
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "seat",
+        "message": "which seat",
+        "choices": [
+          {
+            "disabled": false,
+            "title": "seat 1",
+            "value": 1
+          },
+          {
+            "disabled": false,
+            "title": "seat 2",
+            "value": 2
+          },
+          {
+            "disabled": false,
+            "title": "seat 3",
+            "value": 3
+          },
+          {
+            "disabled": false,
+            "title": "seat 4",
+            "value": 4
+          }
+        ],
+        "resolved": 2
+      }
+    },
+    {
+      "type": "stdout",
+      "message": "state: be-ready"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "action",
+        "message": "what action",
+        "choices": [
+          {
+            "title": "ready",
+            "value": "ready",
+            "disabled": false
+          },
+          {
+            "title": "sit",
+            "value": "sit",
+            "disabled": true
+          },
+          {
+            "title": "stand",
+            "value": "stand",
+            "disabled": false
+          },
+          {
+            "title": "join-table",
+            "value": "join-table",
+            "disabled": true
+          },
+          {
+            "title": "invite-robot",
+            "value": "invite-robot",
+            "disabled": false
+          },
+          {
+            "title": "boot-robot",
+            "value": "boot-robot",
+            "disabled": true
+          },
+          {
+            "title": "leave-table",
+            "value": "leave-table",
+            "disabled": true
+          },
+          {
+            "title": "respond-to-service-terminal",
+            "value": "respond-to-service-terminal",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-lounge",
+            "value": "send-chat-lounge",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-table",
+            "value": "send-chat-table",
+            "disabled": false
+          },
+          {
+            "title": "list-tables",
+            "value": "list-tables"
+          },
+          {
+            "title": "refresh",
+            "value": "refresh"
+          },
+          {
+            "title": "quit",
+            "value": "quit"
+          }
+        ],
+        "resolved": "ready"
+      }
+    },
+    {
+      "type": "stdout",
+      "message": "serviceInstance has started"
+    },
+    {
+      "type": "stdout",
+      "message": "state: use-service"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "action",
+        "message": "what action",
+        "choices": [
+          {
+            "title": "ready",
+            "value": "ready",
+            "disabled": true
+          },
+          {
+            "title": "sit",
+            "value": "sit",
+            "disabled": true
+          },
+          {
+            "title": "stand",
+            "value": "stand",
+            "disabled": false
+          },
+          {
+            "title": "join-table",
+            "value": "join-table",
+            "disabled": true
+          },
+          {
+            "title": "invite-robot",
+            "value": "invite-robot",
+            "disabled": true
+          },
+          {
+            "title": "boot-robot",
+            "value": "boot-robot",
+            "disabled": true
+          },
+          {
+            "title": "leave-table",
+            "value": "leave-table",
+            "disabled": true
+          },
+          {
+            "title": "respond-to-service-terminal",
+            "value": "respond-to-service-terminal",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-lounge",
+            "value": "send-chat-lounge",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-table",
+            "value": "send-chat-table",
+            "disabled": false
+          },
+          {
+            "title": "list-tables",
+            "value": "list-tables"
+          },
+          {
+            "title": "refresh",
+            "value": "refresh"
+          },
+          {
+            "title": "quit",
+            "value": "quit"
+          }
+        ],
+        "resolved": "refresh"
+      }
+    },
+    {
+      "type": "stdout",
+      "message": "im player 3 (#3) bids 3"
+    },
+    {
+      "type": "stdout",
+      "message": "im player 4 (#4) bids 3"
+    },
+    {
+      "type": "stdout",
+      "message": "im player 1 (#1) bids 3"
+    },
+    {
+      "type": "stdout",
+      "message": "im player 2 (#2), here are your cards: hearts(Jack, 8, 7, 3), clubs(10, 9, 8, 7, 2), spades(Ace, 10, 8, 5)"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "message": "im player 2, how many books do you bid?",
+        "type": "number",
+        "name": "bid",
+        "min": 0,
+        "max": 13,
+        "initial": 1,
+        "resolved": 3
+      }
+    },
+    {
+      "type": "stdout",
+      "message": "state: use-service"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "action",
+        "message": "what action",
+        "choices": [
+          {
+            "title": "ready",
+            "value": "ready",
+            "disabled": true
+          },
+          {
+            "title": "sit",
+            "value": "sit",
+            "disabled": true
+          },
+          {
+            "title": "stand",
+            "value": "stand",
+            "disabled": false
+          },
+          {
+            "title": "join-table",
+            "value": "join-table",
+            "disabled": true
+          },
+          {
+            "title": "invite-robot",
+            "value": "invite-robot",
+            "disabled": true
+          },
+          {
+            "title": "boot-robot",
+            "value": "boot-robot",
+            "disabled": true
+          },
+          {
+            "title": "leave-table",
+            "value": "leave-table",
+            "disabled": true
+          },
+          {
+            "title": "respond-to-service-terminal",
+            "value": "respond-to-service-terminal",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-lounge",
+            "value": "send-chat-lounge",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-table",
+            "value": "send-chat-table",
+            "disabled": false
+          },
+          {
+            "title": "list-tables",
+            "value": "list-tables"
+          },
+          {
+            "title": "refresh",
+            "value": "refresh"
+          },
+          {
+            "title": "quit",
+            "value": "quit"
+          }
+        ],
+        "resolved": null
+      }
+    },
+    {
+      "type": "stdout",
+      "message": "im player 2 (#2) bids 3"
+    },
+    {
+      "type": "stdout",
+      "message": "Bid    : G,G,G,G,G,G,_,R,R,R,R,R,R"
+    },
+    {
+      "type": "stdout",
+      "message": "serviceInstance was aborted (stand upundefined)"
+    },
+    {
+      "type": "stdout",
+      "message": "serviceInstance was aborted ([object Object]undefined)"
+    },
+    {
+      "type": "stdout",
+      "message": "state: be-ready"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "action",
+        "message": "what action",
+        "choices": [
+          {
+            "title": "ready",
+            "value": "ready",
+            "disabled": false
+          },
+          {
+            "title": "sit",
+            "value": "sit",
+            "disabled": true
+          },
+          {
+            "title": "stand",
+            "value": "stand",
+            "disabled": false
+          },
+          {
+            "title": "join-table",
+            "value": "join-table",
+            "disabled": true
+          },
+          {
+            "title": "invite-robot",
+            "value": "invite-robot",
+            "disabled": true
+          },
+          {
+            "title": "boot-robot",
+            "value": "boot-robot",
+            "disabled": true
+          },
+          {
+            "title": "leave-table",
+            "value": "leave-table",
+            "disabled": true
+          },
+          {
+            "title": "respond-to-service-terminal",
+            "value": "respond-to-service-terminal",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-lounge",
+            "value": "send-chat-lounge",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-table",
+            "value": "send-chat-table",
+            "disabled": false
+          },
+          {
+            "title": "list-tables",
+            "value": "list-tables"
+          },
+          {
+            "title": "refresh",
+            "value": "refresh"
+          },
+          {
+            "title": "quit",
+            "value": "quit"
+          }
+        ]
+      }
+    }
+  ],
+  [
+    {
+      "type": "stdout",
+      "message": "welcome to table service"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "text",
+        "name": "name",
+        "message": "what is your name",
+        "initial": "alex",
+        "resolved": "im player 3"
+      }
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "service",
+        "message": "which service",
+        "choices": [
+          {
+            "title": "spades",
+            "value": "spades"
+          }
+        ],
+        "resolved": "spades"
+      }
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "action",
+        "message": "what action",
+        "choices": [
+          {
+            "title": "ready",
+            "value": "ready",
+            "disabled": true
+          },
+          {
+            "title": "sit",
+            "value": "sit",
+            "disabled": true
+          },
+          {
+            "title": "stand",
+            "value": "stand",
+            "disabled": true
+          },
+          {
+            "title": "join-table",
+            "value": "join-table",
+            "disabled": false
+          },
+          {
+            "title": "invite-robot",
+            "value": "invite-robot",
+            "disabled": true
+          },
+          {
+            "title": "boot-robot",
+            "value": "boot-robot",
+            "disabled": true
+          },
+          {
+            "title": "leave-table",
+            "value": "leave-table",
+            "disabled": true
+          },
+          {
+            "title": "respond-to-service-terminal",
+            "value": "respond-to-service-terminal",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-lounge",
+            "value": "send-chat-lounge",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-table",
+            "value": "send-chat-table",
+            "disabled": true
+          },
+          {
+            "title": "list-tables",
+            "value": "list-tables"
+          },
+          {
+            "title": "refresh",
+            "value": "refresh"
+          },
+          {
+            "title": "quit",
+            "value": "quit"
+          }
+        ],
+        "resolved": "join-table"
+      }
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "table",
+        "message": "which table",
+        "choices": [
+          {
+            "title": "89c23e0e140b2a4a9e1453b77a209be5",
+            "value": 1
+          },
+          {
+            "title": "7282ca0a6eb73e8e1ea2e7d8b689d8c7",
+            "value": 2
+          }
+        ],
+        "resolved": 2
+      }
+    },
+    {
+      "type": "stdout",
+      "message": "state: take-seat"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "action",
+        "message": "what action",
+        "choices": [
+          {
+            "title": "ready",
+            "value": "ready",
+            "disabled": true
+          },
+          {
+            "title": "sit",
+            "value": "sit",
+            "disabled": false
+          },
+          {
+            "title": "stand",
+            "value": "stand",
+            "disabled": true
+          },
+          {
+            "title": "join-table",
+            "value": "join-table",
+            "disabled": true
+          },
+          {
+            "title": "invite-robot",
+            "value": "invite-robot",
+            "disabled": false
+          },
+          {
+            "title": "boot-robot",
+            "value": "boot-robot",
+            "disabled": true
+          },
+          {
+            "title": "leave-table",
+            "value": "leave-table",
+            "disabled": false
+          },
+          {
+            "title": "respond-to-service-terminal",
+            "value": "respond-to-service-terminal",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-lounge",
+            "value": "send-chat-lounge",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-table",
+            "value": "send-chat-table",
+            "disabled": false
+          },
+          {
+            "title": "list-tables",
+            "value": "list-tables"
+          },
+          {
+            "title": "refresh",
+            "value": "refresh"
+          },
+          {
+            "title": "quit",
+            "value": "quit"
+          }
+        ],
+        "resolved": "sit"
+      }
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "seat",
+        "message": "which seat",
+        "choices": [
+          {
+            "disabled": false,
+            "title": "seat 1",
+            "value": 1
+          },
+          {
+            "disabled": false,
+            "title": "seat 2",
+            "value": 2
+          },
+          {
+            "disabled": false,
+            "title": "seat 3",
+            "value": 3
+          },
+          {
+            "disabled": false,
+            "title": "seat 4",
+            "value": 4
+          }
+        ],
+        "resolved": 3
+      }
+    },
+    {
+      "type": "stdout",
+      "message": "state: be-ready"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "action",
+        "message": "what action",
+        "choices": [
+          {
+            "title": "ready",
+            "value": "ready",
+            "disabled": false
+          },
+          {
+            "title": "sit",
+            "value": "sit",
+            "disabled": true
+          },
+          {
+            "title": "stand",
+            "value": "stand",
+            "disabled": false
+          },
+          {
+            "title": "join-table",
+            "value": "join-table",
+            "disabled": true
+          },
+          {
+            "title": "invite-robot",
+            "value": "invite-robot",
+            "disabled": false
+          },
+          {
+            "title": "boot-robot",
+            "value": "boot-robot",
+            "disabled": true
+          },
+          {
+            "title": "leave-table",
+            "value": "leave-table",
+            "disabled": true
+          },
+          {
+            "title": "respond-to-service-terminal",
+            "value": "respond-to-service-terminal",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-lounge",
+            "value": "send-chat-lounge",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-table",
+            "value": "send-chat-table",
+            "disabled": false
+          },
+          {
+            "title": "list-tables",
+            "value": "list-tables"
+          },
+          {
+            "title": "refresh",
+            "value": "refresh"
+          },
+          {
+            "title": "quit",
+            "value": "quit"
+          }
+        ],
+        "resolved": "ready"
+      }
+    },
+    {
+      "type": "stdout",
+      "message": "serviceInstance has started"
+    },
+    {
+      "type": "stdout",
+      "message": "state: use-service"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "action",
+        "message": "what action",
+        "choices": [
+          {
+            "title": "ready",
+            "value": "ready",
+            "disabled": true
+          },
+          {
+            "title": "sit",
+            "value": "sit",
+            "disabled": true
+          },
+          {
+            "title": "stand",
+            "value": "stand",
+            "disabled": false
+          },
+          {
+            "title": "join-table",
+            "value": "join-table",
+            "disabled": true
+          },
+          {
+            "title": "invite-robot",
+            "value": "invite-robot",
+            "disabled": true
+          },
+          {
+            "title": "boot-robot",
+            "value": "boot-robot",
+            "disabled": true
+          },
+          {
+            "title": "leave-table",
+            "value": "leave-table",
+            "disabled": true
+          },
+          {
+            "title": "respond-to-service-terminal",
+            "value": "respond-to-service-terminal",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-lounge",
+            "value": "send-chat-lounge",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-table",
+            "value": "send-chat-table",
+            "disabled": false
+          },
+          {
+            "title": "list-tables",
+            "value": "list-tables"
+          },
+          {
+            "title": "refresh",
+            "value": "refresh"
+          },
+          {
+            "title": "quit",
+            "value": "quit"
+          }
+        ],
+        "resolved": "refresh"
+      }
+    },
+    {
+      "type": "stdout",
+      "message": "im player 3 (#3), here are your cards: hearts(9, 6, 2), diamonds(Jack, 10, 6), clubs(Ace, 6, 4), spades(Queen, Jack, 9, 2)"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "message": "im player 3, how many books do you bid?",
+        "type": "number",
+        "name": "bid",
+        "min": 0,
+        "max": 13,
+        "initial": 2,
+        "resolved": 3
+      }
+    },
+    {
+      "type": "stdout",
+      "message": "state: use-service"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "action",
+        "message": "what action",
+        "choices": [
+          {
+            "title": "ready",
+            "value": "ready",
+            "disabled": true
+          },
+          {
+            "title": "sit",
+            "value": "sit",
+            "disabled": true
+          },
+          {
+            "title": "stand",
+            "value": "stand",
+            "disabled": false
+          },
+          {
+            "title": "join-table",
+            "value": "join-table",
+            "disabled": true
+          },
+          {
+            "title": "invite-robot",
+            "value": "invite-robot",
+            "disabled": true
+          },
+          {
+            "title": "boot-robot",
+            "value": "boot-robot",
+            "disabled": true
+          },
+          {
+            "title": "leave-table",
+            "value": "leave-table",
+            "disabled": true
+          },
+          {
+            "title": "respond-to-service-terminal",
+            "value": "respond-to-service-terminal",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-lounge",
+            "value": "send-chat-lounge",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-table",
+            "value": "send-chat-table",
+            "disabled": false
+          },
+          {
+            "title": "list-tables",
+            "value": "list-tables"
+          },
+          {
+            "title": "refresh",
+            "value": "refresh"
+          },
+          {
+            "title": "quit",
+            "value": "quit"
+          }
+        ],
+        "resolved": null
+      }
+    },
+    {
+      "type": "stdout",
+      "message": "im player 3 (#3) bids 3"
+    },
+    {
+      "type": "stdout",
+      "message": "im player 4 (#4) bids 3"
+    },
+    {
+      "type": "stdout",
+      "message": "im player 1 (#1) bids 3"
+    },
+    {
+      "type": "stdout",
+      "message": "im player 2 (#2) bids 3"
+    },
+    {
+      "type": "stdout",
+      "message": "Bid    : G,G,G,G,G,G,_,R,R,R,R,R,R"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "card",
+        "message": "im player 3, which card would you like to play?",
+        "choices": [
+          {
+            "title": "Ace of clubs",
+            "value": "Ace of clubs",
+            "disabled": false
+          },
+          {
+            "title": "6 of clubs",
+            "value": "6 of clubs",
+            "disabled": false
+          },
+          {
+            "title": "4 of clubs",
+            "value": "4 of clubs",
+            "disabled": false
+          },
+          {
+            "title": "Jack of diamonds",
+            "value": "Jack of diamonds",
+            "disabled": false
+          },
+          {
+            "title": "10 of diamonds",
+            "value": "10 of diamonds",
+            "disabled": false
+          },
+          {
+            "title": "6 of diamonds",
+            "value": "6 of diamonds",
+            "disabled": false
+          },
+          {
+            "title": "9 of hearts",
+            "value": "9 of hearts",
+            "disabled": false
+          },
+          {
+            "title": "6 of hearts",
+            "value": "6 of hearts",
+            "disabled": false
+          },
+          {
+            "title": "2 of hearts",
+            "value": "2 of hearts",
+            "disabled": false
+          },
+          {
+            "title": "Queen of spades",
+            "value": "Queen of spades",
+            "disabled": true
+          },
+          {
+            "title": "Jack of spades",
+            "value": "Jack of spades",
+            "disabled": true
+          },
+          {
+            "title": "9 of spades",
+            "value": "9 of spades",
+            "disabled": true
+          },
+          {
+            "title": "2 of spades",
+            "value": "2 of spades",
+            "disabled": true
+          }
+        ],
+        "initial": "Ace of clubs",
+        "resolved": null
+      }
+    },
+    {
+      "type": "stdout",
+      "message": "serviceInstance was aborted (stand upundefined)"
+    },
+    {
+      "type": "stdout",
+      "message": "serviceInstance was aborted ([object Object]undefined)"
+    },
+    {
+      "type": "stdout",
+      "message": "state: be-ready"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "action",
+        "message": "what action",
+        "choices": [
+          {
+            "title": "ready",
+            "value": "ready",
+            "disabled": false
+          },
+          {
+            "title": "sit",
+            "value": "sit",
+            "disabled": true
+          },
+          {
+            "title": "stand",
+            "value": "stand",
+            "disabled": false
+          },
+          {
+            "title": "join-table",
+            "value": "join-table",
+            "disabled": true
+          },
+          {
+            "title": "invite-robot",
+            "value": "invite-robot",
+            "disabled": true
+          },
+          {
+            "title": "boot-robot",
+            "value": "boot-robot",
+            "disabled": true
+          },
+          {
+            "title": "leave-table",
+            "value": "leave-table",
+            "disabled": true
+          },
+          {
+            "title": "respond-to-service-terminal",
+            "value": "respond-to-service-terminal",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-lounge",
+            "value": "send-chat-lounge",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-table",
+            "value": "send-chat-table",
+            "disabled": false
+          },
+          {
+            "title": "list-tables",
+            "value": "list-tables"
+          },
+          {
+            "title": "refresh",
+            "value": "refresh"
+          },
+          {
+            "title": "quit",
+            "value": "quit"
+          }
+        ]
+      }
+    }
+  ],
+  [
+    {
+      "type": "stdout",
+      "message": "welcome to table service"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "text",
+        "name": "name",
+        "message": "what is your name",
+        "initial": "alex",
+        "resolved": "im player 4"
+      }
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "service",
+        "message": "which service",
+        "choices": [
+          {
+            "title": "spades",
+            "value": "spades"
+          }
+        ],
+        "resolved": "spades"
+      }
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "action",
+        "message": "what action",
+        "choices": [
+          {
+            "title": "ready",
+            "value": "ready",
+            "disabled": true
+          },
+          {
+            "title": "sit",
+            "value": "sit",
+            "disabled": true
+          },
+          {
+            "title": "stand",
+            "value": "stand",
+            "disabled": true
+          },
+          {
+            "title": "join-table",
+            "value": "join-table",
+            "disabled": false
+          },
+          {
+            "title": "invite-robot",
+            "value": "invite-robot",
+            "disabled": true
+          },
+          {
+            "title": "boot-robot",
+            "value": "boot-robot",
+            "disabled": true
+          },
+          {
+            "title": "leave-table",
+            "value": "leave-table",
+            "disabled": true
+          },
+          {
+            "title": "respond-to-service-terminal",
+            "value": "respond-to-service-terminal",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-lounge",
+            "value": "send-chat-lounge",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-table",
+            "value": "send-chat-table",
+            "disabled": true
+          },
+          {
+            "title": "list-tables",
+            "value": "list-tables"
+          },
+          {
+            "title": "refresh",
+            "value": "refresh"
+          },
+          {
+            "title": "quit",
+            "value": "quit"
+          }
+        ],
+        "resolved": "join-table"
+      }
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "table",
+        "message": "which table",
+        "choices": [
+          {
+            "title": "89c23e0e140b2a4a9e1453b77a209be5",
+            "value": 1
+          },
+          {
+            "title": "7282ca0a6eb73e8e1ea2e7d8b689d8c7",
+            "value": 2
+          }
+        ],
+        "resolved": 2
+      }
+    },
+    {
+      "type": "stdout",
+      "message": "state: take-seat"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "action",
+        "message": "what action",
+        "choices": [
+          {
+            "title": "ready",
+            "value": "ready",
+            "disabled": true
+          },
+          {
+            "title": "sit",
+            "value": "sit",
+            "disabled": false
+          },
+          {
+            "title": "stand",
+            "value": "stand",
+            "disabled": true
+          },
+          {
+            "title": "join-table",
+            "value": "join-table",
+            "disabled": true
+          },
+          {
+            "title": "invite-robot",
+            "value": "invite-robot",
+            "disabled": false
+          },
+          {
+            "title": "boot-robot",
+            "value": "boot-robot",
+            "disabled": true
+          },
+          {
+            "title": "leave-table",
+            "value": "leave-table",
+            "disabled": false
+          },
+          {
+            "title": "respond-to-service-terminal",
+            "value": "respond-to-service-terminal",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-lounge",
+            "value": "send-chat-lounge",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-table",
+            "value": "send-chat-table",
+            "disabled": false
+          },
+          {
+            "title": "list-tables",
+            "value": "list-tables"
+          },
+          {
+            "title": "refresh",
+            "value": "refresh"
+          },
+          {
+            "title": "quit",
+            "value": "quit"
+          }
+        ],
+        "resolved": "sit"
+      }
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "seat",
+        "message": "which seat",
+        "choices": [
+          {
+            "disabled": false,
+            "title": "seat 1",
+            "value": 1
+          },
+          {
+            "disabled": false,
+            "title": "seat 2",
+            "value": 2
+          },
+          {
+            "disabled": false,
+            "title": "seat 3",
+            "value": 3
+          },
+          {
+            "disabled": false,
+            "title": "seat 4",
+            "value": 4
+          }
+        ],
+        "resolved": 4
+      }
+    },
+    {
+      "type": "stdout",
+      "message": "state: be-ready"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "action",
+        "message": "what action",
+        "choices": [
+          {
+            "title": "ready",
+            "value": "ready",
+            "disabled": false
+          },
+          {
+            "title": "sit",
+            "value": "sit",
+            "disabled": true
+          },
+          {
+            "title": "stand",
+            "value": "stand",
+            "disabled": false
+          },
+          {
+            "title": "join-table",
+            "value": "join-table",
+            "disabled": true
+          },
+          {
+            "title": "invite-robot",
+            "value": "invite-robot",
+            "disabled": false
+          },
+          {
+            "title": "boot-robot",
+            "value": "boot-robot",
+            "disabled": true
+          },
+          {
+            "title": "leave-table",
+            "value": "leave-table",
+            "disabled": true
+          },
+          {
+            "title": "respond-to-service-terminal",
+            "value": "respond-to-service-terminal",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-lounge",
+            "value": "send-chat-lounge",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-table",
+            "value": "send-chat-table",
+            "disabled": false
+          },
+          {
+            "title": "list-tables",
+            "value": "list-tables"
+          },
+          {
+            "title": "refresh",
+            "value": "refresh"
+          },
+          {
+            "title": "quit",
+            "value": "quit"
+          }
+        ],
+        "resolved": "ready"
+      }
+    },
+    {
+      "type": "stdout",
+      "message": "serviceInstance has started"
+    },
+    {
+      "type": "stdout",
+      "message": "state: use-service"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "action",
+        "message": "what action",
+        "choices": [
+          {
+            "title": "ready",
+            "value": "ready",
+            "disabled": true
+          },
+          {
+            "title": "sit",
+            "value": "sit",
+            "disabled": true
+          },
+          {
+            "title": "stand",
+            "value": "stand",
+            "disabled": false
+          },
+          {
+            "title": "join-table",
+            "value": "join-table",
+            "disabled": true
+          },
+          {
+            "title": "invite-robot",
+            "value": "invite-robot",
+            "disabled": true
+          },
+          {
+            "title": "boot-robot",
+            "value": "boot-robot",
+            "disabled": true
+          },
+          {
+            "title": "leave-table",
+            "value": "leave-table",
+            "disabled": true
+          },
+          {
+            "title": "respond-to-service-terminal",
+            "value": "respond-to-service-terminal",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-lounge",
+            "value": "send-chat-lounge",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-table",
+            "value": "send-chat-table",
+            "disabled": false
+          },
+          {
+            "title": "list-tables",
+            "value": "list-tables"
+          },
+          {
+            "title": "refresh",
+            "value": "refresh"
+          },
+          {
+            "title": "quit",
+            "value": "quit"
+          }
+        ],
+        "resolved": "refresh"
+      }
+    },
+    {
+      "type": "stdout",
+      "message": "im player 3 (#3) bids 3"
+    },
+    {
+      "type": "stdout",
+      "message": "im player 4 (#4), here are your cards: hearts(Ace, King), diamonds(Ace, 9, 7, 5, 4, 3), clubs(King, Queen), spades(King, 6, 3)"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "message": "im player 4, how many books do you bid?",
+        "type": "number",
+        "name": "bid",
+        "min": 0,
+        "max": 13,
+        "initial": 3,
+        "resolved": 3
+      }
+    },
+    {
+      "type": "stdout",
+      "message": "state: use-service"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "action",
+        "message": "what action",
+        "choices": [
+          {
+            "title": "ready",
+            "value": "ready",
+            "disabled": true
+          },
+          {
+            "title": "sit",
+            "value": "sit",
+            "disabled": true
+          },
+          {
+            "title": "stand",
+            "value": "stand",
+            "disabled": false
+          },
+          {
+            "title": "join-table",
+            "value": "join-table",
+            "disabled": true
+          },
+          {
+            "title": "invite-robot",
+            "value": "invite-robot",
+            "disabled": true
+          },
+          {
+            "title": "boot-robot",
+            "value": "boot-robot",
+            "disabled": true
+          },
+          {
+            "title": "leave-table",
+            "value": "leave-table",
+            "disabled": true
+          },
+          {
+            "title": "respond-to-service-terminal",
+            "value": "respond-to-service-terminal",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-lounge",
+            "value": "send-chat-lounge",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-table",
+            "value": "send-chat-table",
+            "disabled": false
+          },
+          {
+            "title": "list-tables",
+            "value": "list-tables"
+          },
+          {
+            "title": "refresh",
+            "value": "refresh"
+          },
+          {
+            "title": "quit",
+            "value": "quit"
+          }
+        ],
+        "resolved": null
+      }
+    },
+    {
+      "type": "stdout",
+      "message": "im player 4 (#4) bids 3"
+    },
+    {
+      "type": "stdout",
+      "message": "im player 1 (#1) bids 3"
+    },
+    {
+      "type": "stdout",
+      "message": "im player 2 (#2) bids 3"
+    },
+    {
+      "type": "stdout",
+      "message": "Bid    : G,G,G,G,G,G,_,R,R,R,R,R,R"
+    },
+    {
+      "type": "stdout",
+      "message": "serviceInstance was aborted (stand upundefined)"
+    },
+    {
+      "type": "stdout",
+      "message": "serviceInstance was aborted ([object Object]undefined)"
+    },
+    {
+      "type": "stdout",
+      "message": "state: be-ready"
+    },
+    {
+      "type": "prompt",
+      "options": {
+        "type": "select",
+        "name": "action",
+        "message": "what action",
+        "choices": [
+          {
+            "title": "ready",
+            "value": "ready",
+            "disabled": false
+          },
+          {
+            "title": "sit",
+            "value": "sit",
+            "disabled": true
+          },
+          {
+            "title": "stand",
+            "value": "stand",
+            "disabled": false
+          },
+          {
+            "title": "join-table",
+            "value": "join-table",
+            "disabled": true
+          },
+          {
+            "title": "invite-robot",
+            "value": "invite-robot",
+            "disabled": true
+          },
+          {
+            "title": "boot-robot",
+            "value": "boot-robot",
+            "disabled": true
+          },
+          {
+            "title": "leave-table",
+            "value": "leave-table",
+            "disabled": true
+          },
+          {
+            "title": "respond-to-service-terminal",
+            "value": "respond-to-service-terminal",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-lounge",
+            "value": "send-chat-lounge",
+            "disabled": false
+          },
+          {
+            "title": "send-chat-table",
+            "value": "send-chat-table",
+            "disabled": false
+          },
+          {
+            "title": "list-tables",
+            "value": "list-tables"
+          },
+          {
+            "title": "refresh",
+            "value": "refresh"
+          },
+          {
+            "title": "quit",
+            "value": "quit"
+          }
+        ]
+      }
+    }
+  ]
+]

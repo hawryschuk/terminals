@@ -16,42 +16,29 @@ export class TerminalRestApiClient {
             terminals: WebTerminal[];
         }[];
     }[]> {
-        return this.httpClient({ url: 'services' });
+        return this
+            .httpClient({ url: 'services' })
+            .then(services => {
+                if (!(services instanceof Array)) throw new Error(`unknown services - ${services}`);
+                for (const service of services) {
+                    for (const instance of service.instances) {
+                        instance.terminals.forEach((terminal: any, i: number) => {
+                            instance.terminals[i] = new WebTerminal(terminal);
+                        })
+                    }
+                }
+                return services;
+            });
     }
 
-    static get freeTerminals() { return this.terminals.then(terminals => terminals.filter(terminal => terminal.available)); }
+    static get freeTerminals() {
+        return this.terminals.then(terminals => Util.where(terminals, { available: true }));
+    }
 
-    static get terminals(): Promise<{
-        service: string;
-        instance: string;
-        terminal: string;
-        available: boolean;
-    }[]> {
-        return this.services.then((services) => {
-            console.log({ services }); return services.reduce((terminals, service) => [
-                ...terminals,
-                ...service.instances.reduce(
-                    (terminals: any[], instance: any) => [
-                        ...terminals,
-                        ...instance
-                            .terminals
-                            .map((terminal: any) => ({
-                                service: terminal.service,
-                                instance: terminal.instance,
-                                terminal: terminal.id,
-                                owner: terminal.owner,
-                                finished: terminal.finished,
-                                available: (!terminal.owner || Util.equalsDeep(terminal.owner, {})) && !terminal.finished
-                            }))
-                    ], [] as any)
-            ], [] as {
-                service: string;
-                instance: string;
-                description?: string; // TODO
-                terminal: string;
-                available: boolean;
-            }[])
-        });
+    static get terminals(): Promise<WebTerminal[]> {
+        return this
+            .httpClient({ url: 'terminals' })
+            .then((terminals: any[]) => terminals.map((terminal: any) => new WebTerminal(terminal)));
     }
 
     static async createTerminal(serviceId: string, instanceId: string, terminalId: string): Promise<Terminal> {
@@ -97,9 +84,9 @@ export class TerminalRestApiClient {
     }
 
     static getTerminalInfo(serviceId: string, instanceId: string, terminalId: string): Promise<WebTerminal> {
-        return this.httpClient({
-            method: 'get', url: `services/${serviceId}/${instanceId}/terminals/${terminalId}`
-        });
+        return this
+            .httpClient({ method: 'get', url: `services/${serviceId}/${instanceId}/terminals/${terminalId}` })
+            .then(terminal => terminal && new WebTerminal(terminal));
     }
 
     static getWebSocketsUri(): Promise<string> {
@@ -112,9 +99,9 @@ export class TerminalRestApiClient {
         });
     }
 
-    static respondToPrompt(serviceId: string, instanceId: string, terminalId: string, response: any) {
+    static respondToPrompt(serviceId: string, instanceId: string, terminalId: string, response: any, name: string, index: number): Promise<{ name: string, index: number, value: any }> {
         return this.httpClient({
-            method: 'post', url: `services/${serviceId}/${instanceId}/terminals/${terminalId}/response`, body: { response },
+            method: 'post', url: `services/${serviceId}/${instanceId}/terminals/${terminalId}/response`, body: { response, index, name },
         });
     }
 

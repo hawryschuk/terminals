@@ -1,5 +1,5 @@
 import axios from 'axios';
-
+import { Util } from '@hawryschuk/common'
 import { MinimalHttpClient } from './MinimalHttpClient';
 
 export const axiosHttpClient = (baseURL: string) => <MinimalHttpClient>(async ({
@@ -17,6 +17,6 @@ export const axiosHttpClient = (baseURL: string) => <MinimalHttpClient>(async ({
         data: body,
         headers
     }).catch(error => error.response || error);
-    if (response.status >= 400) throw new Error(JSON.stringify(response.data?.error || response.data));
+    if (response.status >= 400) throw new Error(Util.safeStringify(response.data?.error || response.data));
     else return response.data;
 });

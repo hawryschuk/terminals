@@ -1,12 +1,14 @@
 import express from 'express';
 import { Util } from '@hawryschuk/common';
-import { DynamoDBDAO } from '@hawryschuk/dao-aws';
+import { DAO, Model } from '@hawryschuk/dao';
 import { WebTerminal } from './WebTerminal';
-import DDBMutex from '@hawryschuk/resource-locking/ddb.mutex';
-
-export const atomic = (resource: string, block: any) => DDBMutex
-    .getInstance({ TableName: 'test', resource })
-    .use({ block });
+import { Terminal } from './Terminal';
+import Mutex from '@hawryschuk/resource-locking/mutex';
+import Semaphore from '@hawryschuk/resource-locking/semaphore';
+import AtomicData from '@hawryschuk/resource-locking/atomic.data';
+import { readFileSync, writeFileSync } from 'fs';
+import { TerminalRestApiClient } from './TerminalRestApiClient';
+// export const atomic = (resource: string, block: any) => Mutex.getInstance({ TableName: 'test', resource }).use({ block });
 
 /** The "Terminal Services Rest API Server" is a REST-API Server Application, using Node-Express,
  * that allows for applications interacting with one or more users online through WebTerminal objects.
@@ -31,73 +33,40 @@ export const atomic = (resource: string, block: any) => DDBMutex
  * Features via Technical-Debt
  * 1) Atomic operations on the persisted-data ( to prevent bugs from write-clobbers )
  * */
-export class TerminalRestApiServer2 {
-    wsuri?: string;                     // sometimes the rest-api server knows better than the client what the WebSocket endpoint is
-    notifySocket: Function;             // Q: given a socketId , how do we notify it? A: Inversion of Control! varies by host, ie; AWS API Gateway WebSocket, Azure, GCP
-    static models = { WebTerminal };    // The data models used by this server that are persisted online 
+export class TerminalRestApiServer {
+    static models = { Terminal, WebTerminal };    // The data models used by this server that are persisted online 
+    static semaphore
     constructor(
-        private dao = new DynamoDBDAO(TerminalRestApiServer2.models),
-        private atomic = (resource: string, block: any) => DDBMutex
-            .getInstance({ TableName: 'test', resource })
-            .use({ block })
+        private dao = new DAO(TerminalRestApiServer.models),
+        private atomic = (resource: string, block: any) => Semaphore.getInstance({ data: AtomicData.getInstance({ resource }) }).use({ block })
     ) {
         // DAO.cacheExpiry = 0;
     }
 
-    async notify(terminal: WebTerminal) {
-        console.log('notifying', terminal.socketIds);
-        await Promise.all(terminal
-            .socketIds.map(socketId => this
-                .notifySocket(socketId, {
-                    last: terminal.last,
-                    history: terminal.history.length
-                }).catch(e => null)));
-    }
+    /**
+     * Hawryschuk.com::Table-Service
+     *  /stock.ticker
+     *  /hearts
+     *  /spades
+     *      -- join an existing room
+     *      -- create a new room
+     *          -- watch
+     *          -- sit
+     *          -- boot
+     *          -- stand
+     *      -- once everyone is ready - start game
+     */
 
+    /** Returns the non-expired terminals */
     get terminals(): Promise<WebTerminal[]> {
         return this
             .dao.get<WebTerminal[]>(WebTerminal)
             .then(Object.values)
-            .then(terminals => terminals.filter(terminal => {
-                if (terminal.expired) this.dao.delete(WebTerminal, terminal.id).catch(async e => null);
-                else return true;
-            }));
-    }
-
-    get services() {
-        return this.terminals.then(terminals => {
-            const reduced = terminals.reduce(
-                (services, _terminal) => {
-                    const { id, owner, started, finished, socketIds, history, service: serviceId, instance: serviceInstanceId } = _terminal;
-
-                    const service = Util.findWhere(services, { serviceId }) || { serviceId, instances: [] };
-                    if (!services.includes(service)) services.push(service);
-
-                    const instance = Util.findWhere(service.instances, { serviceInstanceId }) || { serviceInstanceId, terminals: [] };
-                    if (!service.instances.includes(instance)) service.instances.push(instance);
-
-                    instance.terminals.push(_terminal);
-
-                    return services;
-                },
-                [] as {
-                    serviceId: string;
-                    instances: {
-                        serviceInstanceId: string;
-                        terminals: WebTerminal[];
-                    }[]
-                }[]
-            );
-            return reduced;
-        });
-    }
-
-    /** invoked when the terminal info is queried (history/periodic-updates) */
-    async keepAlive(terminal: WebTerminal) {
-        if ((new Date().getTime() - terminal.alive) > 29500)    // expire in 2min, refresh every 1min, update after 30seconds
-            await this.atomic(`TerminalServer::WebTerminal::${terminal.id}`, async () => {
-                await this.dao.update(WebTerminal, terminal.id, { alive: new Date().getTime() });
-            });
+            .then(terminals => terminals
+                .filter(terminal => {
+                    if (terminal.expired) this.dao.delete(WebTerminal, terminal.id).catch(async e => null)
+                    return !terminal.expired;
+                }));
     }
 
     /** Terminal Services : Node-Express REST API App : Deployable to Serverless AWS/Azure/GCP, localhost, and on-prem/co-loc */
@@ -105,27 +74,30 @@ export class TerminalRestApiServer2 {
         .use(require('cors')({ origin: true }))
         .use(require('body-parser').json())
         .use(async (req, res, next) => {
-            await Util.waitUntil(() => this.notifySocket);
             res.append('x-terminal-rest-api-version', '1.0.0');
             next();
         })
+
         .use('/', express.static('frontend'))
 
-        /** What the WebSockets URI is */
-        .get('/wsuri', (req, res) => res.status(200).json({ wsuri: this.wsuri }))
-
-        /** 1) know.services */
-        .get('/services', async (req, res) => {         // { id, description, instances:[{id,started,finished,terminals:[{id,owner,started,finished,history}...]}...] }[]
-            const services = await this.services;
-            for (const service of services)
-                for (const instance of service.instances)
-                    instance.terminals = instance.terminals.map(terminal =>
-                        terminal.POJO()) as any;
-            res.status(200).json(services)
-        })
-
+        /** 1A) know [all] terminals */
         .get('/terminals', async (req, res) => {         // { id, description, instances:[{id,started,finished,terminals:[{id,owner,started,finished,history}...]}...] }[]
             res.status(200).json(await this.terminals.then(t => t.map(t => t.POJO())));
+        })
+
+        /** 1B) know just the terminal you will use */
+        .get('/services/:service_id/terminal', async (req, res) => {
+            const owner = Util.safely(() => JSON.parse(req.query.owner as string));
+            if (owner && !Util.equalsDeep({}, owner)) {
+                const terminal = await this.atomic('free-terminal', async () => {
+                    const terminal: WebTerminal = await Util.waitUntil(async () => (await this.terminals).find(t => t.available));
+                    await terminal.claim(owner);
+                    return terminal;
+                });
+                res.status(200).json(terminal.POJO());
+            } else {
+                res.status(400).json({ error: 'invalid-owner' })
+            }
         })
 
         /** 1) Create a new terminal : As an externally running application, I want to interface with users online, and will create WebTerminals to do so */
@@ -144,14 +116,14 @@ export class TerminalRestApiServer2 {
             res.status(204).json(terminal.POJO());
         })
 
-        /** 2) claim-terminal-[promptee]-ownership  <--  1) know-services-instances-terminals */
+        /** 2) Claim terminal ownership */
         .put('/services/:service_id/:instance_id/terminals/:terminal_id/owner', async (req, res) => {
             const { terminal_id } = req.params;
             const { owner } = req.body;
             await this.atomic(`TerminalServer::WebTerminal::${terminal_id}`, async () => {
                 const terminal: WebTerminal = await this.dao.get(WebTerminal, terminal_id);
                 if (terminal) {
-                    await this.dao.update(WebTerminal, terminal_id, { owner });
+                    await terminal.update$({ owner });
                     res.status(200).json(terminal.POJO());
                 } else {
                     res.status(403).end();
@@ -159,22 +131,28 @@ export class TerminalRestApiServer2 {
             });
         })
 
-        /** 3) promptee-reads-terminal-history */
         .get('/services/:service_id/:instance_id/terminals/:terminal_id', async (req, res) => {
             const { terminal_id } = req.params;
-            const terminal = await this.dao.get<WebTerminal>(WebTerminal, terminal_id);
-            await this.keepAlive(terminal);
-            res.status(200).json(terminal.POJO());
+            await this.atomic(`TerminalServer::WebTerminal::${terminal_id}`, async () => {
+                const terminal = await this.dao.get<WebTerminal>(WebTerminal, terminal_id);
+                if (terminal) await terminal.keepAlive();
+                res.status(terminal ? 200 : 404).json(terminal && terminal.POJO());
+            });
         })
 
         /** 3.2) [OPTIONAL] promptee reads subsequent terminal history after a certain ?start point */
         .get('/services/:service_id/:instance_id/terminals/:terminal_id/history', async (req, res) => {
-            const { start } = req.query as any;
+            const { start = '0' } = req.query as any;
             const { terminal_id } = req.params;
-            const terminal = await this.dao.get<WebTerminal>(WebTerminal, terminal_id);
-            await this.keepAlive(terminal);
-            const { history = [] } = terminal || {};
-            res.status(200).json(history.slice(parseInt(start)));
+            await this.atomic(`TerminalServer::WebTerminal::${terminal_id}`, async () => {
+                const terminal = await this.dao.get<WebTerminal>(WebTerminal, terminal_id);
+                if (terminal) {
+                    await terminal.keepAlive();
+                    const { history = [] } = terminal || {};
+                    res.status(200).json(history.slice(parseInt(start)));
+                } else
+                    res.status(404).end();
+            });
         })
 
         /** WebTerminal Creator overwrites the history (usually in initialization) */
@@ -183,7 +161,6 @@ export class TerminalRestApiServer2 {
             await this.atomic(`TerminalServer::WebTerminal::${terminal_id}`, async () => {
                 const terminal: WebTerminal = await this.dao.get(WebTerminal, terminal_id);
                 const history = req.body;
-                console.log('received history for terminal ', history);
                 await this.dao.update(WebTerminal, terminal_id, { history });
                 res.status(200).json(terminal.POJO());
             });
@@ -194,30 +171,31 @@ export class TerminalRestApiServer2 {
             const { terminal_id } = req.params;
             await this.atomic(`TerminalServer::WebTerminal::${terminal_id}`, async () => {
                 const terminal: WebTerminal = await this.dao.get(WebTerminal, terminal_id);
-                if (terminal) await this.dao.update(WebTerminal, terminal_id, { owner: undefined });
+                if (terminal) await terminal.update$({ owner: undefined });
                 res.status(200).json(terminal.POJO());
             });
         })
 
+        .get('/save', async () => { writeFileSync('save.json', JSON.stringify(Object.values(await this.dao.get(WebTerminal)).map((t: any) => t.POJO()))); })
+        .get('/load', async () => { JSON.parse(readFileSync('save.json').toString()).forEach(t => this.dao.create(WebTerminal, t)) })
+
         /** Promptee responds to a prompt */
         .post('/services/:service_id/:instance_id/terminals/:terminal_id/response', async (req, res) => {
-            console.log('POST .../terminal/response ');
             const { terminal_id } = req.params;
             await this.atomic(`TerminalServer::WebTerminal::${terminal_id}`, async () => {
                 const terminal: WebTerminal = await this.dao.get(WebTerminal, terminal_id);
+                const { index, name, response: value } = req.body;
                 if (terminal) {
-                    if (terminal.last.type !== 'prompt')
-                        res.status(500).json({ error: 'not-prompted' });
-                    else if ('resolved' in terminal.last.options)
-                        res.status(500).json({ error: 'already-resolved' });
-                    else if (terminal.prompted) {
-                        console.log('posting response -- then notify');
-                        terminal.prompted.resolved = req.body.response;
-                        await this.dao.update(WebTerminal, terminal.id, { history: terminal.history });
-                        await this.notify(terminal);
-                        res.status(200).json(terminal.POJO());
-                    }
+                    const temp = TerminalRestApiClient.httpClient;
+                    TerminalRestApiClient.httpClient = null;
+                    const { error, success } = <any>await terminal.respond(value, name, index).then(success => ({ success })).catch(error => ({ error }));
+                    TerminalRestApiClient.httpClient = temp;
+                    res.status(error ? 500 : 200).json(error ? { error: error.message } : success);
+                } else {
+                    res.status(404).json({ error: 'non-existent' });
                 }
+            }).catch(e => {
+                console.error(e.message);
             });
         })
 
@@ -227,8 +205,7 @@ export class TerminalRestApiServer2 {
             await this.atomic(`TerminalServer::WebTerminal::${terminal_id}`, async () => {
                 const terminal: WebTerminal = await this.dao.get(WebTerminal, terminal_id);
                 if (terminal) {
-                    await this.dao.update(WebTerminal, terminal_id, { history: [...terminal.history, req.body] });
-                    await this.notify(terminal); // push-notification through existing websocket 
+                    await terminal.update$({ history: [...terminal.history, req.body] });
                     res.status(200).json(terminal.POJO());
                 } else {
                     res.status(404).json({ error: 'non-existent-terminal' });
@@ -240,8 +217,7 @@ export class TerminalRestApiServer2 {
             const { terminal_id } = req.params;
             const terminal: WebTerminal = await this.dao.get(WebTerminal, terminal_id);
             const removedElements = terminal && await this.dao.delete(WebTerminal, terminal_id);
-            if (terminal) await this.notify(terminal);
-            res.status(204).json(removedElements.POJO());
+            res.status(204).json(Util.safely(() => (removedElements as any).POJO()));
         })
 
 }
