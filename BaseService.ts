@@ -4,8 +4,8 @@ import { Terminal } from './Terminal';
 import { Table } from './Table';
 
 export abstract class BaseService {
-    table: Table;
-    id: string;
+    id!: string;
+    table!: Table;
 
     constructor({
         id = `${new Date().getTime()}-${Util.UUID}`,
@@ -28,7 +28,7 @@ export abstract class BaseService {
     onFinished?: Function;
 
     /** Service-Loop: Run the application entirety: Continuously run the auto until not !running !finished , ran by TableServiceHost.maintain() when a table becomes ready and a new serviceInstance is generated and run() is called */
-    results: { error?: any; winners?: string[]; losers?: string[]; };
+    results?: { error?: any; winners?: string[]; losers?: string[]; };
     run() {
         return this.running ||= Util
             .pause(100)
@@ -38,10 +38,10 @@ export abstract class BaseService {
                     const results = await this
                         .auto()
                         .catch(error => {
-                            console.log('error running service', error.message, error.stack);
+                            console.error('error running service', error.message, error.stack);
                             return { error };
                         });
-                    if (!(this.results ||= results)) await Util.pause(100);
+                    if (!(this.results ||= results)) await Util.pause(10);
                 }
                 if (this.onFinished) await this.onFinished();
                 delete this.running;

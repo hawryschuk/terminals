@@ -11,10 +11,10 @@ export class Table {
         Object.assign(this, { id, service, seats: new Array(service.seats).fill(null).map(() => new Seat(this)) });
     }
 
-    id: string;
-    service: Service;
-    serviceInstance: BaseService;
-    seats: Seat[];
+    id!: string;
+    service!: Service;
+    serviceInstance?: BaseService;
+    seats!: Seat[];
 
     get names() { return this.seats.map((s, i) => s.occupant instanceof TableService ? s.occupant.name : `robot ${i + 1}`); }
     get terminals() { return this.seats.map(s => s.terminal) }
@@ -34,7 +34,7 @@ export class Table {
     }
 
     async abort(reason: string) {   // abort the serviceInstance, all its prompts, 
-        if (this.serviceInstance) this.serviceInstance.abort(reason);
+        this.serviceInstance?.abort(reason);
 
         for (const member of this.members) {
             const indexes = member.terminal.promptedActivity.map(item => member.terminal.history.indexOf(item));

@@ -7,6 +7,8 @@ import { Service } from './Service';
 import { TableService } from './TableService';
 import { User } from './User';
 import { Game as StockTicker } from '../stock.ticker/business/game';
+import { Terminal } from './Terminal';
+import { TerminalActivity } from './TerminalActivity';
 
 export class TableServiceHost {
     static agents: TableService[] = [];
@@ -16,12 +18,12 @@ export class TableServiceHost {
         new Service({
             name: 'spades',
             seats: 4,
-            generateService: async table => new Game({ table, terminals: table.terminals })
+            generateService: async (table: Table) => new Game({ table, terminals: table.terminals })
         }),
         new Service({
             name: 'stock ticker',
             seats: 4,
-            generateService: async table => new StockTicker({ table, terminals: table.terminals })
+            generateService: async (table: Table) => new StockTicker({ table, terminals: table.terminals })
         })
     ];
 
@@ -31,7 +33,7 @@ export class TableServiceHost {
         let created = 0;
 
         /** For a given terminal (WebTerminal) -- provide it with table service -- make its table -- execute Service.run() -- Keep it alive while unowned -- */
-        const monitor = terminal => {
+        const monitor = (terminal: WebTerminal) => {
             {   // auto-create the service table if it doesnt exist
                 const service = this.services.find(s => s.name === terminal.input.service);
                 while (terminal.input.table && service && !service.tables[parseInt(terminal.input.table) - 1]) {
@@ -53,7 +55,7 @@ export class TableServiceHost {
         };
 
         /** Monitor all existing WebTerminals */
-        Object.values(await dao.get(WebTerminal)).forEach(monitor);
+        Object.values(await dao.get(WebTerminal)).forEach(terminal => monitor(terminal as WebTerminal));
 
         /** For the services that were interrupted : abort them */
         for (const service of this.services) {
@@ -72,27 +74,27 @@ export class TableServiceHost {
         while (true) { // every 2 seconds, check to create a new TableService WebTerminal, or Table objects for each service
             await Util.pause(2000);
             // console.log('maintain', new Date())
-            const terminals: any = Object.values(await dao.get(WebTerminal));
+            const terminals: WebTerminal[] = Object.values(await dao.get(WebTerminal));
 
             /** Host.maintain() : Expired terminals : 1) Abort the table (agent.name takes loss), 2) Remove agent(from host), 3) Remove terminal (from dao) */
             // console.log('/** Host.maintain() : Expired terminals : 1) Abort the table (agent.name takes loss), 2) Remove agent(from host), 3) Remove terminal (from dao) */')
             for (const terminal of terminals.filter(t => t.expired)) {
                 const index = TableServiceHost.agents.findIndex(a => a.terminal === terminal);
                 if (index >= 0) {
-                    const agent = TableServiceHost.agents[index];
-                    const { table, seat: { position }, name } = agent;
+                    const agent: TableService = TableServiceHost.agents[index];
+                    const { table, seat, name } = agent;
                     TableServiceHost.agents.splice(index, 1);
                     terminals.splice(terminals.indexOf(terminal), 1);
                     await terminal.finish();
-                    await terminal.delete();
-                    if (table) await table.abort(`${name} (#${position}) disconnected`);
+                    await terminal.delete!();
+                    if (table) await table.abort(`${name} (#${seat?.position}) disconnected`);
                 }
             }
 
             /** TableService.maintain() : Auto-update the prompt with different choices */
             for (const agent of TableServiceHost.agents) {
-                const index = () => agent.terminal.history.indexOf(agent.terminal.promptedFor({ name: 'action', value: 'refresh' }));
-                while (index() >= 0 && !Util.equalsDeep(agent.choices, agent.terminal.history[index()].options.choices))
+                const index = () => agent.terminal.history.indexOf(agent.terminal.promptedFor({ name: 'action', value: 'refresh' }) as TerminalActivity);
+                while (index() >= 0 && !Util.equalsDeep(agent.choices, agent.terminal.history[index()]!.options!.choices))
                     await agent.terminal.respond('refresh', 'action', index());
             }
 
@@ -120,18 +122,18 @@ export class TableServiceHost {
                         console.log('a table is ready that needs a service instance generated')
                         table.serviceInstance = await service.generateService(table);
                         await table.broadcast('serviceInstance has started');
-                        table.serviceInstance
+                        table.serviceInstance!
                             .run()
                             .then(async ({ winners = [], losers = [], error }) => {
                                 await table.broadcast(`serviceInstance has stopped: ${JSON.stringify({ winners, losers, error })}`);
                                 await User.record({
                                     error,
-                                    winners: (await Promise.all(winners.map(async name => await dao.get<User>(User, name)))).filter(Boolean) as User[],
-                                    losers: (await Promise.all(losers.map(async name => await dao.get<User>(User, name)))).filter(Boolean) as User[],
+                                    winners: (await Promise.all(winners.map(async (name: string) => await dao.get<User>(User, name)))).filter(Boolean) as User[],
+                                    losers: (await Promise.all(losers.map(async (name: string) => await dao.get<User>(User, name)))).filter(Boolean) as User[],
                                     service: service.name
                                 });
                             })
-                            .finally(() => delete table.serviceInstance)
+                            .finally(() => delete (table as any).serviceInstance)
                         // TODO: use win/loss for ratings/etc
                     }
                 }

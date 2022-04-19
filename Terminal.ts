@@ -8,16 +8,16 @@ export { TerminalActivity } from './TerminalActivity';
 export class Terminal extends Model {
     static uuid = Util.UUID;
     static instances: Terminal[] = [];
-    public id: string;
+    public id!: string;
     public owner?: any;
-    public history: TerminalActivity[];
+    public history!: TerminalActivity[];
     public started = new Date;
     public finished?: Date;
     public autoanswer?: { [promptName: string]: any[] };
 
     get available() { return !this.owner && !this.finished }
 
-    async finish() { await this.update$({ finished: this.finished || new Date() }); }
+    async finish() { await this.update$!({ finished: this.finished || new Date() }); }
 
     constructor({
         id = `terminal-${Terminal.uuid}-${Terminal.instances.length + 1}`,
@@ -78,19 +78,18 @@ export class Terminal extends Model {
     get prompts(): { [name: string]: Prompt[] } {
         return this
             .promptedActivity
-            .map(item => item.options)
             .reduce((all, item) => {
-                (all[item.name] ||= []).push(item)
+                if (item.options) ((all[item.options.name] ||= []) as any[]).push(item.options)
                 return all;
-            }, {});
+            }, {} as { [name: string]: Prompt[] });
     }
 
-    promptedFor({ name, value }) {
+    promptedFor({ name, value } = {} as { name: string; value: any }) {
         return this
             .promptedActivity
-            .filter(i => i.options.name === name)
-            .find(i => ('initial' in i.options && i.options.initial === value)
-                || (i.options.choices || []).some(c => c.value === value && !c.disabled)
+            .filter(i => i.options?.name === name)
+            .find(i => ('initial' in i.options! && i.options!.initial === value)
+                || (i.options?.choices || []).some(c => c.value === value && !c.disabled)
             )
     }
 
@@ -111,7 +110,7 @@ export class Terminal extends Model {
 
     async send(message: any) {
         if (this.finished) throw new Error('webterminal is finished')
-        await this.update$({ history: [...this.history, { type: 'stdout', message }] });
+        await this.update$!({ history: [...this.history, { type: 'stdout', message }] });
         this.notify();
     }
 
@@ -122,7 +121,7 @@ export class Terminal extends Model {
             .entries(answers)
             .map(async ([key, val]) => {
                 for (const _val of (val instanceof Array ? val : [val])) {
-                    await Util.waitUntil(() => this.prompts[key] && this.respond(_val, key));
+                    await Util.waitUntil(() => this.finished || this.prompts[key] && this.respond(_val, key), { pause: 2 });
                 }
             }));
     }
@@ -134,15 +133,15 @@ export class Terminal extends Model {
             for (const index of indexes) await this.respond(null, undefined, index);
         }
         const { history: { length } } = this;
-        await this.update$({ history: [...this.history, { type: 'prompt', options }] });
+        await this.update$!({ history: [...this.history, { type: 'prompt', options }] });
         this.notify(this.history[length]);
-        await Util.waitUntil(() => { return 'resolved' in (this.history[length]?.options || {}); });
+        await Util.waitUntil(() => { return this.finished || 'resolved' in (this.history[length]?.options || {}); }, { pause: 3 });
         return this.history[length].options!.resolved;
     }
 
-    async respond(value: any, name?: string, index?: number): Promise<{ name, index, value }> {
+    async respond(value: any, name?: string, index?: number): Promise<{ name: string; index: number; value: any; }> {
         if (this.finished) throw new Error('webterminal is finished')
-        if (index === undefined) index = this.history.findIndex(item => item?.type === 'prompt' && !('resolved' in item.options) && (!name || name == item.options.name));
+        if (index === undefined) index = this.history.findIndex(item => item?.type === 'prompt' && item.options && !('resolved' in item.options!) && (!name || name == item.options!.name));
         if (name === undefined) name = this.history[index]?.options?.name;
         const item = Util.deepClone(this.history[index]);
         if (!item) throw new Error(`unknown-item`);
@@ -150,9 +149,9 @@ export class Terminal extends Model {
         if ('resolved' in item.options) throw new Error(`already-resolved`);
         if (item.options.name !== name) throw new Error(`name-mismatch`);
         item.options.resolved = value;
-        await this.update$({ history: Object.assign([...this.history], { [index]: item }) });
+        await this.update$!({ history: Object.assign([...this.history], { [index]: item }) });
         this.notify(this.history[index]);
-        return { name, index, value };
+        return { name: name!, index, value };
     }
 
 }

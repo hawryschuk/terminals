@@ -8,7 +8,7 @@ export class Seat {
     constructor(public table: Table) { }
     get index() { return this.table.seats.indexOf(this) }
     get position() { return 1 + this.index }
-    get occupant(): TableService { return this.table.members.find(m => m.seat === this) }
+    get occupant(): TableService { return this.table.members.find(m => m.seat === this) as TableService }
     get terminal(): Terminal { return this.occupant?.terminal }
     get occupied() { return !!this.occupant || !!this.robot }
     get unoccupied() { return !this.occupied }

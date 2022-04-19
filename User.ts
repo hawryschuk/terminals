@@ -2,9 +2,9 @@ import { Model } from '@hawryschuk/dao';
 import { Util } from '@hawryschuk/common';
 
 export class User extends Model {
-    name: string;
-    location: string;
-    ratings: {
+    name!: string;
+    location!: string;
+    ratings!: {
         [service: string]: {
             rating: number;
             history: {
@@ -49,7 +49,7 @@ export class User extends Model {
                     return { user, ratings }
                 })
                 .map(({ user, ratings }) =>
-                    user.update$({ ratings })));
+                    user.update$!({ ratings })));
 
         } else if (winners.length && losers.length) {
             const winnersRating = winners.length ? ((await Promise.all(winners.map(user => user.rating(service)))).reduce((sum, rating) => sum + rating, 0) / winners.length) : 0;
@@ -72,7 +72,7 @@ export class User extends Model {
                     return { user, ratings }
                 })
                 .map(({ user, ratings }) =>
-                    user.update$({ ratings })));
+                    user.update$!({ ratings })));
         }
     }
 

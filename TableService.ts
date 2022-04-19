@@ -6,7 +6,7 @@ import { Service } from './Service';
 import { Seat } from './Seat';
 import { TableServiceHost } from './TableServiceHost';
 import { User } from './User';
-import { Terminal } from './Terminal';
+import { Terminal, TerminalActivity } from './Terminal';
 import { join } from 'path';
 
 /** TableService brings users together to participate in other services 
@@ -32,80 +32,88 @@ export class TableService {
     /** The name is unique and a registration feature can be added to the TODO list */
     get name(): string { return this.terminal?.input.name }                 // alex
 
-    get service(): Service { return TableServiceHost.services.find(s => s.name === this.terminal?.input?.service) }
+    get service(): Service { return TableServiceHost.services.find(s => s.name === this.terminal?.input?.service) as Service }
 
     get tables() {
-        const item = this.terminal.history.filter((h, i) => (h.message || '').startsWith('{"tables":')).pop();
-        return item && JSON.parse(item!.message).tables;
+        const item: TerminalActivity = this.terminal.history.filter((h, i) => (h.message || '').startsWith('{"tables":')).pop() as TerminalActivity;
+        return item && JSON.parse(item!.message!).tables;
     }
 
     get lounge() {
         const item = this.terminal.history.filter((h, i) => (h.message || '').startsWith('{"lounge":')).pop();
-        return item && JSON.parse(item!.message).lounge;
+        return item && JSON.parse(item!.message!).lounge;
     }
 
     get serviceState() {
-        const started = this.terminal.history.filter(i => /^serviceInstance has started/.test(i.message)).pop();
-        const stopped = this.terminal.history.filter(i => /^serviceInstance (has stopped|was aborted)/.test(i.message)).pop();
-        const item = this.terminal.history.filter((h, i) => (h.message || '').startsWith('{"state":')).pop();
+        const started = this.terminal.history.filter(i => /^serviceInstance has started/.test(i.message!)).pop() as TerminalActivity;
+        const stopped = this.terminal.history.filter(i => /^serviceInstance (has stopped|was aborted)/.test(i.message!)).pop() as TerminalActivity;
+        const item = this.terminal.history.filter((h, i) => (h.message || '').startsWith('{"state":')).pop() as TerminalActivity;
         return item
             && this.terminal.history.indexOf(started) > this.terminal.history.indexOf(stopped)
             && this.terminal.history.indexOf(item) > this.terminal.history.indexOf(started)
-            && JSON.parse(item!.message).state;
+            && JSON.parse(item!.message!).state;
     }
 
     get table(): Table {
         if (this.terminal) {
             const service = this.terminal.inputIndexes.service;
-            const left = this.terminal.history.filter(i => i.options?.name === 'action' && i.options.resolved === 'leave-table').pop();
-            const joined = this.terminal.history.filter(i => i.options?.name === 'table' && parseInt(i.options.resolved) > 0).pop();
-            return this.terminal.history.indexOf(joined) > service
+            const left = this.terminal.history.filter(i => i.options?.name === 'action' && i.options.resolved === 'leave-table').pop() as TerminalActivity;
+            const joined = this.terminal.history.filter(i => i.options?.name === 'table' && parseInt(i.options.resolved) > 0).pop() as TerminalActivity;
+            return joined && (this.terminal.history.indexOf(joined) > service
                 && this.terminal.history.indexOf(joined) > this.terminal.history.indexOf(left)
-                && (this.service?.tables[(joined.options.resolved) - 1] || joined.options.resolved);
+                && (this.service!.tables[(joined!.options!.resolved! as number) - 1]) || joined!.options!.resolved!
+            )
         } else {
-            return null;
+            return null as any;
         }
     }
 
     get seat(): Seat | null {
-        const left = this.terminal.history.filter(item => item.options?.resolved === 'leave-table').pop();
-        const standing = this.terminal.history.filter(i => i.options?.name === 'action' && i.options.resolved === 'stand').pop();
-        const sitting = this.terminal.history.filter(i => i.options?.name === 'seat' && (i.options.resolved) >= 1).pop();
-        const seat = sitting && this.table && (this.table?.seats && this.table.seats[(sitting.options.resolved) - 1] || sitting.options.resolved);
-        const joined = this.terminal.history.filter(i => i.options?.name === 'table' && (i.options.resolved) >= 1).pop();
-        return this.table
+        const left = this.terminal.history.filter(item => item.options?.resolved === 'leave-table').pop() as TerminalActivity;
+        const standing = this.terminal.history.filter(i => i.options?.name === 'action' && i.options.resolved === 'stand').pop() as TerminalActivity;
+        const sitting = this.terminal.history.filter(i => i.options?.name === 'seat' && (i.options.resolved) >= 1).pop() as TerminalActivity;
+        const seat: Seat = sitting && (this.table.seats ? this.table.seats[(sitting!.options!.resolved! as number) - 1] : sitting!.options!.resolved!) as Seat;
+        const joined = this.terminal.history.filter(i => i.options?.name === 'table' && (i.options.resolved) >= 1).pop() as TerminalActivity;
+        return (this.table
             && this.terminal.history.indexOf(joined) > this.terminal.history.indexOf(left)
             && this.terminal.history.indexOf(sitting) > this.terminal.history.indexOf(joined)
             && this.terminal.history.indexOf(sitting) > this.terminal.history.indexOf(standing)
-            && seat
+            && seat) as Seat
     }
 
     get results() {
-        return !this.ready && this.terminal.history.map(item => /serviceInstance has stopped: (.+)/.exec(item.message)).filter(Boolean).slice(-1).map(i => JSON.parse(i[1])).pop();
+        return !this.ready && this
+            .terminal
+            .history
+            .map(item => (/serviceInstance has stopped: (.+)/.exec(item.message!) || [])[1])
+            .filter(Boolean)
+            .slice(-1)
+            .map((i: string) => JSON.parse(i!))
+            .pop() as string;
     }
 
     get ready() {
-        const sitting = this.seat && this.terminal.history.filter(i => i.options?.name === 'seat' && (i.options.resolved) >= 1).pop();
-        const ready = sitting && this.terminal.history.filter(i => i.options?.name === 'action' && i.options.resolved === 'ready').pop();
-        const finished = this.terminal.history.filter(item => /serviceInstance (?:was aborted|has stopped)/.test(item.message)).pop();
-        return this.terminal.history.indexOf(ready) > this.terminal.history.indexOf(sitting)
-            && this.terminal.history.indexOf(ready) > this.terminal.history.indexOf(finished)
+        const sitting = this.seat && this.terminal.history.filter(i => i.options?.name === 'seat' && (i.options.resolved) >= 1).pop() as TerminalActivity;
+        const ready = sitting && this.terminal.history.filter(i => i.options?.name === 'action' && i.options.resolved === 'ready').pop() as TerminalActivity;
+        const finished = this.terminal.history.filter(item => /serviceInstance (?:was aborted|has stopped)/.test(item.message!)).pop() as TerminalActivity;
+        return this.terminal.history.indexOf(ready as TerminalActivity) > this.terminal.history.indexOf(sitting as TerminalActivity)
+            && this.terminal.history.indexOf(ready as TerminalActivity) > this.terminal.history.indexOf(finished as TerminalActivity)
     }
 
     /** Has this agent(on behalf of terminal) invited a robot to certain seat? */
     invitedRobot(seat: number) {
-        const booted = this.terminal.history.filter(item => item.type === 'prompt' && item.options.name === 'robot' && item.options.resolved === seat && item.options.message.includes('boot robot')).pop();
-        const invited = this.terminal.history.filter(item => item.type === 'prompt' && item.options.name === 'robot' && item.options.resolved === seat && item.options.message.includes('invite robot')).pop();
-        const joined = this.terminal.history.filter(i => i.options?.name === 'table' && (i.options.resolved) >= 1).pop();
-        return this.terminal.history.indexOf(invited) > this.terminal.history.indexOf(booted)
-            && this.terminal.history.indexOf(invited) > this.terminal.history.indexOf(joined);
+        const booted = this.terminal.history.filter(item => item.type === 'prompt' && item.options!.name === 'robot' && item.options!.resolved === seat && item.options!.message!.includes('boot robot')).pop() as TerminalActivity;
+        const invited = this.terminal.history.filter(item => item.type === 'prompt' && item.options!.name === 'robot' && item.options!.resolved === seat && item.options!.message!.includes('invite robot')).pop() as TerminalActivity;
+        const joined = this.terminal.history.filter(i => i.options?.name === 'table' && (i.options.resolved) >= 1).pop() as TerminalActivity;
+        return this.terminal.history.indexOf(invited!) > this.terminal.history.indexOf(booted!)
+            && this.terminal.history.indexOf(invited!) > this.terminal.history.indexOf(joined!);
     }
 
-    getAgent = name => TableServiceHost.agents.find(a => a !== this && a.terminal.input.name === name);
+    getAgent = (name: string) => TableServiceHost.agents.find(a => a !== this && a.terminal.input.name === name) as TableService;
 
-    user: User;
+    user?: User;
 
-    get choices() {
+    get choices(): { title: string; value: string; disabled?: boolean; }[] {
         return [
             { title: 'pause', value: 'pause', disabled: false },
             { title: 'leave-service', value: 'leave-service', disabled: !this.service },
@@ -129,7 +137,7 @@ export class TableService {
     async run(dao: DAO) {
         // console.log('running table service');
 
-        if (!this.terminal.history.find(i => /welcome to table service/.test(i.message)))
+        if (!this.terminal.history.find(i => /welcome to table service/.test(i.message!)))
             await this.terminal.send('welcome to table service');
 
         // console.log('running table service2');
@@ -161,7 +169,7 @@ export class TableService {
                     choices: TableServiceHost.services.map(s => ({ title: s.name, value: s.name }))
                 });
             }
-            this.user.rating(this.service.name);
+            this.user!.rating(this.service!.name);
         }; await selectService();
 
         // console.log('running table service4', this.terminal.input.service);
@@ -171,7 +179,7 @@ export class TableService {
             const { name } = this;
             const { serviceInstance, ready: wasRunning } = table || {};
             const { position } = seat || {};
-            const handlers = {
+            const handlers: any = {
                 'quit': async () => {
                     await this.terminal.send('finished');
                     this.terminal.finished = new Date;
@@ -188,7 +196,7 @@ export class TableService {
                     });
                 },
                 'leave-service': async () => {
-                    await (this.terminal as Model).update$({ history: [...this.terminal.history, { type: 'prompt', options: { name: 'service', resolved: '' } }] });
+                    await (this.terminal as Model).update$!({ history: [...this.terminal.history, { type: 'prompt', options: { name: 'service', resolved: '' } }] });
                     await selectService();
                 },
                 'sit': async () => {
@@ -260,8 +268,8 @@ export class TableService {
             // console.log('/going to get the action...', choice)
 
             if (!handlers[choice]) console.log('no handler for choice', choice);
-            else if ((choices as any).find(c => c.value === choice).disabled) console.log('choice is disabled', choice)
-            else await handlers[choice]().catch(error => {
+            else if (choices.find(c => c.value === choice)?.disabled) console.log('choice is disabled', choice)
+            else await handlers[choice]!().catch((error: any) => {
                 console.error('could not run choice!!', error);
                 throw error;
             });

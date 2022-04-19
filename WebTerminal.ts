@@ -7,7 +7,7 @@ import { Prompt } from './Prompt';
 
 export class WebTerminal extends Terminal {
 
-    static get TerminalRestApiClient() { return TerminalRestApiClient.httpClient && TerminalRestApiClient; }
+    static get TerminalRestApiClient() { return TerminalRestApiClient.httpClient! && TerminalRestApiClient; }
     static get Services() { return TerminalRestApiClient.services; }
     static get Terminals() { return TerminalRestApiClient.terminals; }
     static DAO = new DAO({ WebTerminal }); // for memcacheing WebTerminal instances 
@@ -23,8 +23,8 @@ export class WebTerminal extends Terminal {
         console.log('retrieving existing (or creating a new) web terminal ...', { baseuri, service, instance, id, owner })
         const info = await TerminalRestApiClient.getTerminalInfo(service, instance, id);
         if (info) {
-            const existing = await this.DAO.get(WebTerminal, id);
-            const terminal = existing || await this.DAO.create(WebTerminal, <any>{ ...info, owner: owner || info.owner, baseuri });
+            const existing: WebTerminal = await this.DAO.get(WebTerminal, id);
+            const terminal: WebTerminal = existing || await this.DAO.create(WebTerminal, <any>{ ...info, owner: owner || info.owner, baseuri });
             if (!terminal.service || !terminal.instance) debugger;
             if (owner && !Util.equalsDeep(owner, info.owner)) await TerminalRestApiClient.getTerminalOwnership(service, instance, id, owner);
             terminal.maintain();
@@ -64,7 +64,7 @@ export class WebTerminal extends Terminal {
     get connected() { return !this.expired }
     async keepAlive() {
         if ((new Date().getTime() - this.alive) > 29500)    // expire in 2min, refresh every 1min, update after 30seconds
-            await this.update$({ alive: new Date().getTime() });
+            await this.update$!({ alive: new Date().getTime() });
     }
     //#endregion
 
@@ -95,14 +95,14 @@ export class WebTerminal extends Terminal {
         })();
     }
 
-    public async respond(value: any, name?: string, index?: number): Promise<{ name, index, value }> {
+    public async respond(value: any, name?: string, index?: number): Promise<{ name: string; index: number; value: any; }> {
         if (!TerminalRestApiClient.httpClient || !this.prompted) return await super.respond(value, name, index);
         // if (index === undefined) index = this.history.findIndex(item => item?.type === 'prompt' && !('resolved' in item.options) && (!name || name == item.options.name));
         // if (name === undefined) name = this.history[index]?.options?.name;
-        const result = await TerminalRestApiClient.respondToPrompt(this.service, this.instance, this.id, value, name, index);
+        const result = await TerminalRestApiClient.respondToPrompt(this.service, this.instance, this.id, value, name!, index!);
         if (!Util.equalsDeep(result, { name: name ?? result.name, index: index ?? result.index, value })) { debugger; throw new Error('name index value mismatch') }
         await Util.waitUntil(() => { return ('resolved' in (this.history[result.index]?.options || {})) });
-        if (!Util.equalsDeep(value, this.history[result.index].options.resolved)) throw new Error('unable to respond with that value');
+        if (!Util.equalsDeep(value, this.history[result.index]!.options!.resolved)) throw new Error('unable to respond with that value');
         return result;
     }
 
@@ -126,7 +126,7 @@ export class WebTerminal extends Terminal {
     async claim(_owner: any) {
         return await TerminalRestApiClient
             .getTerminalOwnership(this.service, this.instance, this.id, _owner)
-            .then(({ owner }) => this.update$({ owner }))
+            .then(({ owner }) => this.update$!({ owner }))
     }
 
     /** Synchronize the last activity fetched online into this instance */
@@ -140,7 +140,7 @@ export class WebTerminal extends Terminal {
         const changed = !Util.equalsDeep(before, after);
         for (let i = 0; i < after.length; i++) {
             if (!Util.equalsDeep(before[i], after[i])) {
-                await this.update$({ history: Object.assign([...this.history], { [i]: after[i] }) });
+                await this.update$!({ history: Object.assign([...this.history], { [i]: after[i] }) });
                 this.notify(this.history[i]);
             }
         }
