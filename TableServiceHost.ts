@@ -7,6 +7,7 @@ import { Service } from './Service';
 import { TableService } from './TableService';
 import { User } from './User';
 import { Game as StockTicker } from '../stock.ticker/business/game';
+import { Game as Telefunken } from '../telefunken/business/game';
 import { Terminal } from './Terminal';
 import { TerminalActivity } from './TerminalActivity';
 
@@ -24,6 +25,11 @@ export class TableServiceHost {
             name: 'stock ticker',
             seats: 4,
             generateService: async (table: Table) => new StockTicker({ table, terminals: table.terminals })
+        }),
+        new Service({
+            name: 'telefunken',
+            seats: 4,
+            generateService: async (table: Table) => new Telefunken({ table, terminals: table.terminals })
         })
     ];
 
