@@ -1,13 +1,13 @@
 {
-  "name": "@hawryschuk/terminal-restapi",
+  "name": "@hawryschuk/terminals",
   "version": "1.0.0",
   "description": "",
   "main": "index.ts",
   "bin": {
-    "restaurant-reviews": "./index.ts"
+    "hawryschuk-terminals": "./cli.ts"
   },
   "scripts": {
-    "hawryschuk": "npm link @hawryschuk/common @hawryschuk/dao @hawryschuk/dao-aws @hawryschuk/resource-locking @hawryschuk/dao-sqlite",
+    "hawryschuk": "npm link @hawryschuk/common @hawryschuk/dao @hawryschuk/dao-aws @hawryschuk/resource-locking @hawryschuk/dao-sqlite @hawryschuk/spades-business @hawryschuk/telefunken-business @hawryschuk/stock-ticker",
     "postinstall": "hawryschuk --peer-dependencies && npm run hawryschuk",
     "test": "sleep 0 && ts-mocha *.spec.ts --timeout=115000",
     "build": "tsc --outDir dist && hawryschuk --package-json",
@@ -76,7 +76,7 @@
     "chai": "^4.3.4",
     "chai-http": "^4.3.0",
     "mocha": "^8.3.2",
-    "nodemon": "^2.0.7",
+    "nodemon": "^2.0.15",
     "ts-mocha": "^8.0.0"
   }
 }

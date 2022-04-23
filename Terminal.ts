@@ -17,7 +17,7 @@ export class Terminal extends Model {
 
     get available() { return !this.owner && !this.finished }
 
-    async finish() { await this.update$!({ finished: this.finished || new Date() }); }
+    async finish() { await this.update$({ finished: this.finished || new Date() }); }
 
     constructor({
         id = `terminal-${Terminal.uuid}-${Terminal.instances.length + 1}`,

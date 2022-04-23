@@ -20,7 +20,6 @@ export class WebTerminal extends Terminal {
         id: string;
         owner?: any;
     }) {
-        console.log('retrieving existing (or creating a new) web terminal ...', { baseuri, service, instance, id, owner })
         const info = await TerminalRestApiClient.getTerminalInfo(service, instance, id);
         if (info) {
             const existing: WebTerminal = await this.DAO.get(WebTerminal, id);
@@ -64,7 +63,7 @@ export class WebTerminal extends Terminal {
     get connected() { return !this.expired }
     async keepAlive() {
         if ((new Date().getTime() - this.alive) > 29500)    // expire in 2min, refresh every 1min, update after 30seconds
-            await this.update$!({ alive: new Date().getTime() });
+            await this.update$({ alive: new Date().getTime() });
     }
     //#endregion
 
@@ -90,7 +89,6 @@ export class WebTerminal extends Terminal {
             const [before, after] = [Util.deepClone({ ...this }), Util.deepClone({ ...this, ...info })]
             '_cached started baseuri alive'.split(' ').forEach(s => delete before[s] && delete after[s])
             const equals = Util.equalsDeep(before, after);
-            Util.log({ before, after, equals })
             return equals;
         })();
     }
@@ -126,7 +124,7 @@ export class WebTerminal extends Terminal {
     async claim(_owner: any) {
         return await TerminalRestApiClient
             .getTerminalOwnership(this.service, this.instance, this.id, _owner)
-            .then(({ owner }) => this.update$!({ owner }))
+            .then(({ owner }) => this.update$({ owner }))
     }
 
     /** Synchronize the last activity fetched online into this instance */
@@ -157,6 +155,5 @@ export class WebTerminal extends Terminal {
             });
             await Util.pause(750);
         }
-        console.log('this webterminal is done')
     }
 }

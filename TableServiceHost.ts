@@ -1,13 +1,13 @@
 import { DAO } from '@hawryschuk/dao';
 import { Util } from '@hawryschuk/common';
 import { WebTerminal } from "./WebTerminal";
-import { Game } from '../spades/business';
 import { Table } from './Table';
 import { Service } from './Service';
 import { TableService } from './TableService';
 import { User } from './User';
-import { Game as StockTicker } from '../stock.ticker/business/game';
-import { Game as Telefunken } from '../telefunken/business/game';
+import { Game as SpadesGame } from '@hawryschuk/spades-business';
+import { Game as StockTickerGame } from '@hawryschuk/stock-ticker/business/game';
+import { Game as TelefunkenGame } from '@hawryschuk/telefunken-business';
 import { Terminal } from './Terminal';
 import { TerminalActivity } from './TerminalActivity';
 
@@ -19,17 +19,17 @@ export class TableServiceHost {
         new Service({
             name: 'spades',
             seats: 4,
-            generateService: async (table: Table) => new Game({ table, terminals: table.terminals })
+            generateService: async (table: Table) => new SpadesGame({ table, terminals: table.terminals })
         }),
         new Service({
             name: 'stock ticker',
             seats: 4,
-            generateService: async (table: Table) => new StockTicker({ table, terminals: table.terminals })
+            generateService: async (table: Table) => new StockTickerGame({ table, terminals: table.terminals })
         }),
         new Service({
             name: 'telefunken',
             seats: 4,
-            generateService: async (table: Table) => new Telefunken({ table, terminals: table.terminals })
+            generateService: async (table: Table) => new TelefunkenGame({ table, terminals: table.terminals })
         })
     ];
 
@@ -126,8 +126,8 @@ export class TableServiceHost {
                 for (const table of service.tables) {
                     if (table.ready && !table.serviceInstance) {
                         console.log('a table is ready that needs a service instance generated')
-                        table.serviceInstance = await service.generateService(table);
                         await table.broadcast('serviceInstance has started');
+                        table.serviceInstance = await service.generateService(table);
                         table.serviceInstance!
                             .run()
                             .then(async ({ winners = [], losers = [], error }) => {

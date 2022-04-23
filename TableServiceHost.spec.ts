@@ -8,7 +8,7 @@ import { TableServiceHost } from "./TableServiceHost";
 
 DAO.cacheExpiry = Infinity;
 
-export const dao = new DAO({ ...TerminalRestApiServer.models, User });
+export const dao = new DAO(TerminalRestApiServer.models);
 
 export const freeTerminal = async (): Promise<WebTerminal> => await Util.waitUntil(async () => {
     const terminal = Object

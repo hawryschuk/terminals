@@ -8,6 +8,7 @@ import Semaphore from '@hawryschuk/resource-locking/semaphore';
 import AtomicData from '@hawryschuk/resource-locking/atomic.data';
 import { readFileSync, writeFileSync } from 'fs';
 import { TerminalRestApiClient } from './TerminalRestApiClient';
+import { User } from './User';
 // export const atomic = (resource: string, block: any) => Mutex.getInstance({ TableName: 'test', resource }).use({ block });
 
 /** The "Terminal Services Rest API Server" is a REST-API Server Application, using Node-Express,
@@ -34,7 +35,7 @@ import { TerminalRestApiClient } from './TerminalRestApiClient';
  * 1) Atomic operations on the persisted-data ( to prevent bugs from write-clobbers )
  * */
 export class TerminalRestApiServer {
-    static models = { Terminal, WebTerminal };    // The data models used by this server that are persisted online 
+    static models = { Terminal, WebTerminal, User };    // The data models used by this server that are persisted online 
     static semaphore
     constructor(
         private dao = new DAO(TerminalRestApiServer.models),
