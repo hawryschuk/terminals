@@ -31,7 +31,7 @@ export class TerminalRestApiClient {
             });
     }
 
-    static get freeTerminals() {
+    static get freeTerminals(): Promise<WebTerminal[]> {
         return this.terminals.then(terminals => Util.where(terminals, { available: true }));
     }
 

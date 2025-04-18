@@ -1,5 +1,5 @@
 import { Util } from '@hawryschuk/common';
-import { DAO } from '@hawryschuk/dao';
+import { DAO,Model } from '@hawryschuk/dao';
 import { TerminalRestApiClient } from './TerminalRestApiClient';
 import { Terminal } from './Terminal';
 import { TerminalActivity } from './TerminalActivity';
@@ -124,7 +124,7 @@ export class WebTerminal extends Terminal {
     async claim(_owner: any) {
         return await TerminalRestApiClient
             .getTerminalOwnership(this.service, this.instance, this.id, _owner)
-            .then(({ owner }) => this.update$({ owner }))
+            .then(({ owner }) => (this as Model).update$({ owner }))
     }
 
     /** Synchronize the last activity fetched online into this instance */
@@ -138,7 +138,7 @@ export class WebTerminal extends Terminal {
         const changed = !Util.equalsDeep(before, after);
         for (let i = 0; i < after.length; i++) {
             if (!Util.equalsDeep(before[i], after[i])) {
-                await this.update$!({ history: Object.assign([...this.history], { [i]: after[i] }) });
+                await (this as Model).update$!({ history: Object.assign([...this.history], { [i]: after[i] }) });
                 this.notify(this.history[i]);
             }
         }

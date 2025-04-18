@@ -1,4 +1,15 @@
 {
+  "ts-node": {
+    // Do not forget to `npm i -D tsconfig-paths`
+    "require": [
+      "tsconfig-paths/register"
+    ]
+  },
+  "paths": {
+    "*": [
+      "../*"
+    ]
+  }, /* Specify a set of entries that re-map imports to additional lookup locations. */
   "compileOnSave": true,
   "exclude": [
     "dist",
