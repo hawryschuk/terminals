@@ -1,47 +1,44 @@
-import { DAO, Model } from '@hawryschuk/dao';
-import { Util } from '@hawryschuk/common';
+import { Model } from '@hawryschuk-crypto/ORM';
+import { Util } from '@hawryschuk-common/util';
 import { Prompt } from './Prompt';
 import { TerminalActivity } from './TerminalActivity';
-import { TerminalRestApiClient } from './TerminalRestApiClient';
 export { TerminalActivity } from './TerminalActivity';
 
+/** TODO: Document why this class is responsible for saving itself?? */
+
 export class Terminal extends Model {
-    static uuid = Util.UUID;
-    static instances: Terminal[] = [];
     public id!: string;
     public owner?: any;
     public history!: TerminalActivity[];
-    public started = new Date;
+    public started!: number;
     public finished?: Date;
     public autoanswer?: { [promptName: string]: any[] };
 
     get available() { return !this.owner && !this.finished }
 
-    async finish() { await this.update$({ finished: this.finished || new Date() }); }
+    async finish() { this.finished ||= new Date(); }
 
     constructor({
-        id = `terminal-${Terminal.uuid}-${Terminal.instances.length + 1}`,
-        owner,
+        id = Util.UUID,
         history = [],
         autoanswer = {},
+        started = Date.now(),
         ...data
-    } = {} as {
+    }: {
         id?: string;
         history?: TerminalActivity[];
+        started?: number;
         autoanswer?: { [promptName: string]: any[] };
         owner?: any;
-    }, dao = DAO.instance) {
-        super({ ...data, history, id, autoanswer }, dao);
-        Terminal.instances.push(this);
-        if (owner && !Util.equalsDeep(owner, {}))
-            this.owner = owner;
+    } = {}) {
+        super({ ...data, id, history, autoanswer, started });
     }
 
     get subscribers(): { handler: Function; event?: string; }[] { return (this as any)[Symbol.for('subscribers')] ||= []; }
     subscribe(options: { handler: Function; event?: string; }) { this.subscribers.push(options); return this; }
     async notify(event: any = this.last) { await Promise.all(this.subscribers.map(s => s.handler(event))); }
 
-    get input() {
+    get input(): Record<string, any> {
         return this.history.reduce((input, item) => {
             if (item.options?.name && 'resolved' in item.options)
                 input[item.options.name] = item.options.resolved;
@@ -57,7 +54,7 @@ export class Terminal extends Model {
         }, {} as { [name: string]: number; })
     }
 
-    get inputs() {
+    get inputs(): Record<string, any[]> {
         return this.history.reduce((input, item) => {
             if (item.options?.name && 'resolved' in item.options)
                 (input[item.options.name] ||= []).push(item.options.resolved);
@@ -109,21 +106,21 @@ export class Terminal extends Model {
     }
 
     async send(message: any) {
-        if (this.finished) throw new Error('webterminal is finished')
-        await this.update$!({ history: [...this.history, { type: 'stdout', message }] });
+        if (this.finished) throw new Error('webterminal is finished');
+        this.history.push({ type: 'stdout', message, time: Date.now() });
+        // await this.save();
         this.notify();
     }
 
-    /** User the following answers to the current and future prompts */
-    answer(answers: any) {
-        if (this.finished) throw new Error('webterminal is finished')
-        return Promise.all(Object
-            .entries(answers)
-            .map(async ([key, val]) => {
-                for (const _val of (val instanceof Array ? val : [val])) {
-                    await Util.waitUntil(() => this.finished || this.prompts[key] && this.respond(_val, key), { pause: 2 });
-                }
-            }));
+    /** Provide answers to multiple prompts which can carry into the future */
+    async answer(answers: any) {
+        for (const [key, val] of Object.entries(answers)) {
+            await Util.waitUntil(async () => {
+                if (this.finished) throw new Error('finished');
+                return this.prompts[key];
+            }, { pause: 2 });
+            await this.respond(val, key);
+        }
     }
 
     async prompt(options: Prompt): Promise<any> {
@@ -133,23 +130,25 @@ export class Terminal extends Model {
             for (const index of indexes) await this.respond(null, undefined, index);
         }
         const { history: { length } } = this;
-        await this.update$!({ history: [...this.history, { type: 'prompt', options }] });
+        this.history.push({ type: 'prompt', options, time: Date.now() });
+        // await this.save();
         this.notify(this.history[length]);
-        await Util.waitUntil(() => { return this.finished || 'resolved' in (this.history[length]?.options || {}); }, { pause: 3 });
+        await Util.waitUntil(async () => this.finished || 'resolved' in (this.history[length]?.options || {}), { pause: 3 });
         return this.history[length].options!.resolved;
     }
 
     async respond(value: any, name?: string, index?: number): Promise<{ name: string; index: number; value: any; }> {
         if (this.finished) throw new Error('webterminal is finished')
-        if (index === undefined) index = this.history.findIndex(item => item?.type === 'prompt' && item.options && !('resolved' in item.options!) && (!name || name == item.options!.name));
-        if (name === undefined) name = this.history[index]?.options?.name;
+        index ??= this.history.findIndex(item => item?.type === 'prompt' && item.options && !('resolved' in item.options!) && (!name || name == item.options!.name));
+        name ??= this.history[index]?.options?.name;
         const item = Util.deepClone(this.history[index]);
         if (!item) throw new Error(`unknown-item`);
         if (item.type !== 'prompt') throw new Error(`type-mismatch`);
         if ('resolved' in item.options) throw new Error(`already-resolved`);
         if (item.options.name !== name) throw new Error(`name-mismatch`);
         item.options.resolved = value;
-        await this.update$!({ history: Object.assign([...this.history], { [index]: item }) });
+        this.history[index] = item;
+        // await this.save();
         this.notify(this.history[index]);
         return { name: name!, index, value };
     }

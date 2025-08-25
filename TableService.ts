@@ -1,13 +1,11 @@
-import { Util } from '@hawryschuk/common';
-import { DAO, Model } from '@hawryschuk/dao';
-import { WebTerminal } from "./WebTerminal";
+import { Util } from '@hawryschuk-common';
 import { Table } from './Table';
 import { Service } from './Service';
 import { Seat } from './Seat';
 import { TableServiceHost } from './TableServiceHost';
 import { User } from './User';
 import { Terminal, TerminalActivity } from './Terminal';
-import { join } from 'path';
+import { ORM } from '@hawryschuk-crypto';
 
 /** TableService brings users together to participate in other services 
  * 1) name = ? (alex)
@@ -32,7 +30,7 @@ export class TableService {
     /** The name is unique and a registration feature can be added to the TODO list */
     get name(): string { return this.terminal?.input.name }                 // alex
 
-    get service(): Service { return TableServiceHost.services.find(s => s.name === this.terminal?.input?.service) as Service }
+    get service(): Service<any> { return TableServiceHost.services.find(s => s.name === this.terminal?.input?.service) as Service<any> }
 
     get tables() {
         const item: TerminalActivity = this.terminal.history.filter((h, i) => (h.message || '').startsWith('{"tables":')).pop() as TerminalActivity;
@@ -127,20 +125,15 @@ export class TableService {
             { title: 'respond-to-service-terminal', value: 'respond-to-service-terminal', disabled: false },
             { title: 'send-chat-lounge', value: 'send-chat-lounge', disabled: !this.service },
             { title: 'send-chat-table', value: 'send-chat-table', disabled: !this.table },
-            ...'refresh quit'
-                .split(' ')
-                .map(v => ({ title: v, value: v }))
+            { title: 'refresh', value: 'refresh' },
+            { title: 'quit', value: 'quit' },
         ];
     }
     /** Run the service with a single terminal : Assist them in running getting a service running ( join a table, seat, start service, finish service, repeat )
      * Welcome, name, service, action=(join-table,sit,ready,invite-robot,boot-robot,stand,leave-table) */
-    async run(dao: DAO) {
-        // console.log('running table service');
-
+    async run(dao: ORM) {
         if (!this.terminal.history.find(i => /welcome to table service/.test(i.message!)))
             await this.terminal.send('welcome to table service');
-
-        // console.log('running table service2');
 
         const login = async () => {
             while (!this.terminal.input.name || this.getAgent(this.terminal.input.name)) {
@@ -154,7 +147,7 @@ export class TableService {
                         : 'what is your name',
                 });
             }
-            this.user = await dao.get(User, this.terminal.input.name) || await dao.create(User, <any>{ id: this.terminal.input.name, name: this.terminal.input.name });
+            this.user = await dao.retrieve(User, this.terminal.input.name) || await dao.save(new User({ id: this.terminal.input.name, name: this.terminal.input.name }));
         }; await login();
 
         // console.log('running table service3', this.terminal.input.name);
@@ -196,7 +189,8 @@ export class TableService {
                     });
                 },
                 'leave-service': async () => {
-                    await (this.terminal as Model).update$!({ history: [...this.terminal.history, { type: 'prompt', options: { name: 'service', resolved: '' } }] });
+                    await Object.assign(this.terminal, { history: [...this.terminal.history, { type: 'prompt', options: { name: 'service', resolved: '' } }] });
+                    await dao.save(this.terminal);
                     await selectService();
                 },
                 'sit': async () => {

@@ -1,10 +1,9 @@
-import { Model, DAO } from '@hawryschuk/dao';
-import { Util } from '@hawryschuk/common';
+import { Util } from '@hawryschuk-common/util';
 import { User } from './User';
 import { expect } from 'chai';
 describe('User', () => {
     it('tracks the ratings of a user', async () => {
-        const users = new Array(10).fill(0).map(() => new User({ name: Util.UUID, id: Util.UUID }, null));
+        const users = new Array(10).fill(0).map(() => Util.UUID).map(id => new User({ name: id, id }));
         await Promise.all(users.map(u => u.rating('spades')));
         users[1].ratings.spades.rating += 100;      // loses 20 points 
         users[3].ratings.spades.rating += 100;      // wins  12 points

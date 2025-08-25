@@ -3,7 +3,6 @@ export * from './Prompt';
 export * from './TerminalActivity';
 export * from './WebTerminal';
 export * from './MinimalHttpClient';
-export * from './TerminalRestApiClient';
 
 // export * from './ConsoleTerminal';           // exe/cli prompts
 // export * from './TerminalRestApiServer';     // exe/cli express

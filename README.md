@@ -1,105 +1,259 @@
 > 2021-07-12 : Software Development : Terminal Communications : Hawryschuk, Alexander
 
 # Terminal Services
-This package provides abstract classes for terminals to be used in a software application for one or more users in one or more places to use the software in tandem.
+This package provides abstract classes for terminals to be used in a software application as a communication layer between the producer and consumer of services.
 
-A terminal is a standad-communication device for input and output, and an application interfaces with one or more users through terminals. Terminals may be interfaced through CLI, through GUI, and remotely through REST-API and WebSockets working with the application and users together.
+* Terminals provide a means of sending/receiving messages and sending/responding-to queries.
 
-An example is Bob playing a card game with three other friends. Bob launches bob.com/cardgame, starts a new game with three online-terminals for his freinds. Bobs friends visit the site, join his game, and play the game through. This all happened through the shared-memory of the two-party WebTerminal interface abstraction.
+An example is as follows: A Service called "Guessing Game" generates a random number between 1 and 10. It then prompts the players to guess a number between 1 and 10. It determines which player is closest, and announces the winner.
 
-User Stories:
-- As a developer, I want to write applications that faciliate remote [user] interaction
-  - Terminal-Services server that maintains WebTerminals (RESTAPI)
-     - STDOUT : Write to WebTerminal
-     - STDIN  : Prompt for input and wait for a response
-- As a user, I want to interface with an application through standard-communication protocols (STDIN/STDOUT)
-  - Connect to the terminal ( console, gui-widgets, rest-api )
-  - Maintain the connection with updates
-  - Respond to prompts
 
 ```plantuml
 @startuml
-    actor OnlinePlayer
-    actor Bob
-    Bob --> UserApp : Start a new 2 vs 2 game
-    
-    loop 3x - WebTerminals are created
-        UserApp -> TerminalServer : WebTerminal.create()
-        loop async while !finished
-            TerminalServer --> TerminalServer : keepAppAlive()
-        end
-    end
-  
-    loop 3x - Online players have joined
-        OnlinePlayer -> UserApp : 2vs2 online - join as player2
-        UserApp -> TerminalServer : what terminals are free?
-        TerminalServer -> UserApp : terminals[a,b,c]
-        UserApp -> TerminalServer : claim terminal A/B/C
-    end
+title Terminal
 
-    
-    loop until game-finishes
-        WebTerminal <-> UserApp : stdout&prompt
-        WebTerminal -> TerminalServer : stdout&prompt
+class Terminal {
+    prompts <<get>>
+    inputs <<get>>
+    input <<get>>
 
-        TerminalServer -> UserApp : stdout&prompt
-        UserApp -> TerminalServer : prompt-responses
-        TerminalServer -> WebTerminal : prompt-responses
-        WebTerminal <-> UserApp : stdout&prompt
-    end
+    prompt(options)
+    send(message)
+    respond(answer,question?)
+    answer(Record<question,answer[]>)
+}
+
+class Activity {
+    message
+}
+
+class Prompt {
+    type
+    name
+    resolved?
+    min?
+    max?
+    initial?
+    choices?
+    clobber?
+    timeout?
+}
+
+class Choice {
+    title
+    value
+    disabled?
+    description?
+}
+
+class TerminalServer {}
+class Message {}
+class ConsoleTerminal {}
+class WebTerminal {
+    __+ connect(id, baseurl) : WebTerminal__
+}
+
+Terminal o-- Activity
+Prompt --|> Activity
+Message --|> Activity
+Prompt o-- Choice
+ConsoleTerminal --|> Terminal
+WebTerminal --|> Terminal
+TerminalServer o-- WebTerminal
+
 @enduml
 ```
 
-```mermaid
-classDiagram
-
-    UserApplication                 o-- Terminal: has/creates
-    UserApplication                 .. User:operates/is-operated-by
-    User                            o-- Terminal
-    ConsoleTerminal                 --|> Terminal
-    WebTerminal                     *-- TerminalActivity: has 0+
-    WebTerminal                     --|> Terminal
-    WebTerminal                     --> TerminalServicesRestApiServer: posts prompt-responses
-    WebTerminal                     <.. TerminalServicesWebSocketServer: gets push-notifications
-    TerminalServicesWebSocketServer *-- TerminalServicesApplication
-    TerminalServicesRestApiServer   *-- TerminalServicesApplication
-    TerminalServicesApplication     *-- DDB: persists WebTerminals to AWS-CloudStorage    
-    DDB                             --|> DAO: 
-    
-    TerminalServicesRestApiServer:uri
-    TerminalServicesWebSocketServer:uri
-
-    class TerminalActivity {
-        type
-        message
+```plantuml
+@startuml
+    title Service Center : Where Service Producers and Consumers Meet
+    class User {
+        id
+        publicKey
+        privateKey
+        verify()
+        sign()
     }
 
-    TerminalActivity "1" *.. "0..1" Prompt
+    class ServiceCenter {
+        terminals
+        services
+        tables
+        join() Terminal
+    }
 
-    class Prompt {
-        type
-        message
-        initial
-        min
-        max
-        choices
+    class Service {
+        NUMBER_OF_SEATS : number[]
+        NAME : string
+        seats:Seat[]
+
+        operate(once?)
+        broadcast(message)
+        message(seat,message)
+        prompt(seat,prompt)
+    }
+
+    class Table {
+        terminals
+        seats
+        service
+    }
+
+    class Seat {
+        terminal        
     }
 
     class Terminal {
-        id
-        stdin
-        stdout
         owner
-        started
-        finished
-        - notify()
-        + subscribe()
+        service
+        lounge
+        table
+        seat
+        prompt(question)
+        respond(answer,question)
     }
-    class WebTerminal {
-        ~retreive()
-        ~create()
-        baseuri
-        wsuri
-        maintain()
-    }    
+
+    class ServiceRegistration {
+        class:Service
+    }
+    
+    GuessingGame --|> Service
+
+    ServiceCenter o-- Terminal
+    ServiceCenter o-- Table
+    ServiceCenter o-- ServiceRegistration
+
+    Table *-- Terminal
+    Table o-- Seat
+    Table o-- Service
+
+    Seat -.- Terminal
+@enduml
+
+```
+
+```plantuml
+@startuml
+title Service Center
+
+actor User
+participant Server
+participant Terminal
+participant Service
+
+== Acquire Terminal ==
+User -> Server: Request Terminal
+Server -> Terminal: Create terminal session
+Server -> User: Provide Terminal
+
+== Communication via Terminal ==
+note over User,Server
+  All further communication occurs
+  via the Terminal:
+  - User: Respond to Prompts
+  - Server: Write Messages & Prompts
+  - Service: Write Messages & Prompts & Notifies Termination
+end note
+
+== Entry Stage ==
+    loop Prompt For Username
+        Server -> Terminal: Prompt [Name]
+        note right of Server
+            Check name is used
+        end note
+        alt Name exists
+            note right of Server
+                Continue Loop
+            end note
+        else Name available
+            note right of Server
+                Accept & Exit Loop
+            end note
+        end
+    end
+
+== Lobby Stage ==
+Server -> Terminal: Message [Service List]
+
+loop Chat Lounge
+    Server -> Terminal: Prompt [Lounge Message]
+end
+
+loop Menu
+    Server -> Terminal: Select Service
+    Server -> Terminal: Show Tables
+    Server -> Terminal: Join Table
+    Server -> Terminal: Create Table
+    Server -> Terminal: Send Table Chat
+    Server -> Terminal: Leave Table
+    Server -> Terminal: Show Seats
+    Server -> Terminal: Sit
+    Server -> Terminal: Stand
+    Server -> Terminal: Ready
+end
+
+alt All seats occupied & ready
+  Server -> Service : Start Service
+else Not all seats ready
+    note right of Server
+        Wait for more users
+    end note
+end
+
+== Service Stage ==
+  loop Until Service ends
+    Service -> Terminal: Message User(s)
+    Service -> Terminal: Prompt User(s)
+    User -> Terminal: Respond to Prompts
+    ... Serviceplay continues ...
+  end
+
+  Service -> Terminal : Announce Winners and Losers
+
+== Apply Results ==
+    Server -> Terminal: Announce effects ( rating , credits , stats , etc )
+    Server -> Terminal: Return to Lobby Stage : Wait for User to be Ready to start again
+
+@enduml
+
+```
+
+```plantuml
+@startuml
+title Example Service: Guessing Game
+
+actor Player1
+actor Player2
+participant Game
+
+== Start ==
+Player1 -> Game: Join game
+Player2 -> Game: Join game
+activate Game
+note over Game
+  Generate random number N in [1..10]
+end note
+
+== Collect guesses ==
+loop For each player
+  Game -> Player1: "Guess a number (1..10)"
+  Player1 --> Game: guess g1
+end
+
+== Decide winners ==
+note over Game
+  Determine winners: players where guess == N
+end note
+
+== Notify results ==
+loop For each player
+  alt Player guessed correctly (g == N)
+    Game -> Player1: You WON!
+  else
+    Game -> Player1: You LOST.
+  end
+end
+
+@enduml
+
 ```

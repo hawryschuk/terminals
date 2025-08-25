@@ -7,11 +7,7 @@ export class MeetupsService {
         terminal1: Terminal,
         terminal2: Terminal
     ) {
-        this.players = [terminal1, terminal2].map((terminal, index) => ({
-            terminal,
-            name: undefined as string,
-            wants_to_meet: undefined as boolean,
-        }));
+        this.players = [terminal1, terminal2].map(terminal => ({ terminal }));
     }
 
     async play() {

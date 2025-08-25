@@ -1,4 +1,4 @@
-import { Util } from '@hawryschuk/common';
+import { Util } from '@hawryschuk-common/util';
 import { Terminal } from "./Terminal";
 
 /** A simple application that sends,prompts,sends,prompts,sends */

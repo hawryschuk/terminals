@@ -1,16 +1,15 @@
 import { TableServiceHost } from './TableServiceHost';
 import { Table } from './Table';
+import { BaseService } from 'BaseService';
 
 
-export class Service {
+export class Service<T extends BaseService> {
     name!: string;
     seats!: number;
-    generateService!: Function; // when a service is generated, it goes into a new Table object in the serviceInstance property
-    tables: Table[] = [];
+    generateService!: (table: Table<T>) => Promise<T>; // when a service is generated, it goes into a new Table object in the serviceInstance property
+    tables: Table<T>[] = [];
 
-    constructor({ name, seats, generateService } = {} as { name: string; seats: number; generateService: Function; }) {
-        Object.assign(this, { name, seats, generateService });
-    }
+    constructor(service: { name: string; seats: number; generateService: (table: Table<T>) => Promise<T>; }) { Object.assign(this, service); }
 
     async broadcast(message: any) { return await Promise.all(this.agents.map(agent => agent.terminal.send(message))); }
 

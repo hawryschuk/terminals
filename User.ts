@@ -1,5 +1,5 @@
-import { Model } from '@hawryschuk/dao';
-import { Util } from '@hawryschuk/common';
+import { Util } from '@hawryschuk-common';
+import { Model } from '@hawryschuk-crypto';
 
 export class User extends Model {
     name!: string;
@@ -49,8 +49,8 @@ export class User extends Model {
                     return { user, ratings }
                 })
                 .map(({ user, ratings }) =>
-                    user.update$!({ ratings })));
-
+                    Object.assign(user, { ratings }).save()
+                ))
         } else if (winners.length && losers.length) {
             const winnersRating = winners.length ? ((await Promise.all(winners.map(user => user.rating(service)))).reduce((sum, rating) => sum + rating, 0) / winners.length) : 0;
             const losersRating = losers.length ? (await Promise.all(losers.map(user => user.rating(service)))).reduce((sum, rating) => sum + rating, 0) / losers.length : 0;
@@ -72,7 +72,8 @@ export class User extends Model {
                     return { user, ratings }
                 })
                 .map(({ user, ratings }) =>
-                    user.update$!({ ratings })));
+                    Object.assign(user, { ratings }).save()
+                ))
         }
     }
 

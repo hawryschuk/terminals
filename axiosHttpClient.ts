@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Util } from '@hawryschuk/common'
+import { Util } from '@hawryschuk-common'
 import { MinimalHttpClient } from './MinimalHttpClient';
 
 export const axiosHttpClient = (baseURL: string) => <MinimalHttpClient>(async ({

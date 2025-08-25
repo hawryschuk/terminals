@@ -1,4 +1,4 @@
-import { Util } from '@hawryschuk/common';
+import { Util } from '@hawryschuk-common';
 import { BaseService } from './BaseService';
 import { TableService } from './TableService';
 import { TableServiceHost } from "./TableServiceHost";
@@ -6,13 +6,13 @@ import { Seat } from "./Seat";
 import { Service } from "./Service";
 
 /** A Table contains multiple members, some are seated, and some are observing */
-export class Table {
-    constructor({ id = Util.UUID, service } = {} as { id?: string; service: Service; }) {
+export class Table<T extends BaseService = any> {
+    constructor({ id = Util.UUID, service } = {} as { id?: string; service: Service<T>; }) {
         Object.assign(this, { id, service, seats: new Array(service.seats).fill(null).map(() => new Seat(this)) });
     }
 
     id!: string;
-    service!: Service;
+    service!: Service<T>;
     serviceInstance?: BaseService;
     seats!: Seat[];
 

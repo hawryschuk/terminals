@@ -1,23 +1,19 @@
-import { Util } from '@hawryschuk/common';
-import { WebTerminal } from './WebTerminal';
-import { Terminal } from './Terminal';
+import { Util } from '@hawryschuk-common';
 import { Table } from './Table';
 
-export abstract class BaseService {
+export abstract class BaseService<T extends BaseService<T> = any> {
     id!: string;
-    table!: Table;
+    table!: Table<T>;
 
     constructor({
         id = `${new Date().getTime()}-${Util.UUID}`,
         table,
-    } = {} as {
+    }: {
         id?: string;
-        table: Table;
+        table: Table<T>;
     }) {
         Object.assign(this, { table, id })
     }
-
-    running?: Promise<any>;
 
     get terminals() { return this.table.terminals }
 
@@ -29,6 +25,7 @@ export abstract class BaseService {
 
     /** Service-Loop: Run the application entirety: Continuously run the auto until not !running !finished , ran by TableServiceHost.maintain() when a table becomes ready and a new serviceInstance is generated and run() is called */
     results?: { error?: any; winners?: string[]; losers?: string[]; };
+    running?: Promise<BaseService<T>['results']>;
     run() {
         return this.running ||= Util
             .pause(100)
@@ -63,7 +60,6 @@ export abstract class BaseService {
         } as any;
     }
 
-    //#region asynchronous interactivity
     paused = false; speed = 20;
     async pause(ms: number) {
         this.paused = true;

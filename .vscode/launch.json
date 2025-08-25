@@ -19,6 +19,33 @@
             "skipFiles": [
                 "<node_internals>/**"
             ]
-        }
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "ts-mocha",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": [
+                "test"
+            ],
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "hello-world",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": [
+                "run",
+                "cli",
+                "--",
+                "--hello-world"
+            ],
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+        },
     ]
 }
