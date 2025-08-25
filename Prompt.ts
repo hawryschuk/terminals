@@ -15,7 +15,7 @@ export type PromptType =
 export interface Prompt<T=any> {
     type: PromptType; // text number multiple toggle
     name: string;
-    message: string;
+    message?: string;
     min?: number;
     max?: number;
     initial?: any;

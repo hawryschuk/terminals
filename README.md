@@ -1,4 +1,5 @@
 > 2021-07-12 : Software Development : Terminal Communications : Hawryschuk, Alexander
+> 2025-08-25 : Refactoring of Terminal[Console|Web] and Rewrite of Terminal Server and Service Center
 
 # Terminal Services
 This package provides abstract classes for terminals to be used in a software application as a communication layer between the producer and consumer of services.
@@ -83,7 +84,7 @@ TerminalServer o-- WebTerminal
     }
 
     class Service {
-        NUMBER_OF_SEATS : number[]
+        USERS : number[] | number | *
         NAME : string
         seats:Seat[]
 
@@ -257,3 +258,20 @@ end
 @enduml
 
 ```
+
+### TODO : 
+- Restore functionality :
+    - Table Chat
+    - Invite Robot
+    - Boot Robot
+    - Stand
+    - Switch Service
+    - Exit
+    - Error handling
+        - user goes offline
+        - error in service
+    - Remote Service Center
+    - CLI
+- User from @hawryschuk-crypto
+    - sign activity
+- Migrate to @hawryschuk-crypto/Server

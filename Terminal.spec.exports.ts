@@ -31,6 +31,13 @@ export const testTerminal = (terminal: Terminal) =>
             expect(terminal.input.location).to.equal('ottawa');
             expect(terminal.input).to.have.nested.property('shoe-size', '16');
         });
+        it('can prompt for a selection from a list', async () => {
+            const choices = [{ value: Date.now(), title: 'date1' }, { value: Date.now() / 2, title: 'date2' }];
+            const { result } = await terminal.prompt({ name: 'date', type: 'select', choices }, false);
+            await terminal.answer({ date: choices[0].value });
+            const awaited = await result;
+            expect(awaited === choices[0].value).to.equal(true);
+        });
         it('allows responding to a specific prompt, such as when there are multiple', async () => {
             terminal.prompt({ name: 'height', type: 'text', message: 'what is your height' });
             await Util.waitUntil(() => Object.keys(terminal.prompts).length === 2);

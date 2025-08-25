@@ -40,7 +40,7 @@ export class WebTerminal extends Terminal {
 
     private atomic<T>(block: () => Promise<T>): Promise<T> { return Mutex.getInstance(`WebTerminal::${this.id}`).use({ block }); }
 
-    public async send(message: any) {
+    override async send(message: any) {
         return await this.atomic(async () => {
             const { history: { length } } = this;
             await this.httpClient({ method: 'put', url: `terminal/${this.id}`, body: { type: 'stdout', message } });
@@ -48,7 +48,7 @@ export class WebTerminal extends Terminal {
         });
     }
 
-    public async prompt(options: Prompt) {
+    override async prompt(options: Prompt, waitResult = true) {
         const { index } = await this.atomic(async () => {
             const { history: { length } } = this;
             await this.httpClient({ method: 'put', url: `terminal/${this.id}`, body: { type: 'prompt', options } });
@@ -60,14 +60,19 @@ export class WebTerminal extends Terminal {
                 }
             }))!;
         });
-        await Util.waitUntil(() => {
-            if (this.finished) throw new Error('finished');
-            return 'resolved' in (this.history[index].options || {})
-        });
-        return this.history[index]!.options!.resolved;
+
+        const result = Util
+            .waitUntil(() => {
+                if (this.finished) throw new Error('finished');
+                return 'resolved' in (this.history[index].options || {})
+            })
+            .then(() => this.history[index]!.options!.resolved)
+            // .then(result => options.choices ? options.choices[result].value : result);
+
+        return waitResult ? await result : { result };
     }
 
-    public async respond(value: any, name?: string, index?: number): Promise<{ name: string; index: number; value: any; }> {
+    override async respond(value: any, name?: string, index?: number) {
         return await this.atomic(async () => {
             const { history: { length } } = this;
 
@@ -88,12 +93,10 @@ export class WebTerminal extends Terminal {
             if (options!.resolved !== value) throw new Error('resolved-with-something-else');
 
             this.notify(this.history[index]);
-
-            return { name: name!, index, value };
         });
     }
 
-    async finish() {
+    override async finish() {
         await this.httpClient({ method: 'delete', url: `terminal/${this.id}` });
         await super.finish();
     }

@@ -10,5 +10,5 @@ import { testTerminal } from './Terminal.spec.exports';
     WebTerminal.httpClient = chaiExpressHttpClient(server.expressApp);
     WebTerminal.REFRESH = 10;
     const terminal = await WebTerminal.connect();
-    testTerminal(terminal!);
+    testTerminal(terminal);
 })();
