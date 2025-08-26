@@ -1,4 +1,5 @@
 > 2021-07-12 : Software Development : Terminal Communications : Hawryschuk, Alexander
+
 > 2025-08-25 : Refactoring of Terminal[Console|Web] and Rewrite of Terminal Server and Service Center
 
 # Terminal Services

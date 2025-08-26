@@ -1,8 +1,9 @@
 import { Util } from "@hawryschuk-common";
-import { MinimalHttpClient } from "MinimalHttpClient";
-import { Messaging, BaseService } from "ServiceCenter";
-import { Terminal } from "Terminal";
-import { WebTerminal } from "WebTerminal";
+import { MinimalHttpClient } from "./MinimalHttpClient";
+import { Messaging } from "./Messaging";
+import { BaseService } from "./BaseService";
+import { Terminal } from "./Terminal";
+import { WebTerminal } from "./WebTerminal";
 
 
 export class ServiceCenterClient {
@@ -28,6 +29,17 @@ export class ServiceCenterClient {
         return !!ended && this.terminal.history.indexOf(ended) > this.terminal.history.indexOf(started!)
             ? ended.message.results
             : undefined;
+    }
+
+    get State() {
+        const { terminal } = this;
+        const started = terminal.history.filter(m => m.message?.type == 'start-service').pop();
+        const ended = terminal.history.filter(m => m.message?.type == 'end-service').pop();
+        const state = terminal.history.filter(m => m.message?.type === 'state').pop();
+        return started && state
+            && (!ended || terminal.history.indexOf(started) > terminal.history.indexOf(ended))
+            && terminal.history.indexOf(state) > terminal.history.indexOf(started)
+            && state!.message!.state
     }
 
     get Results() {

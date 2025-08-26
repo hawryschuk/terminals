@@ -1,18 +1,18 @@
-export * from './Terminal';
+export * from './MinimalHttpClient';
+export * from './axiosHttpClient';           // cli/testing/cross cli/browser
+export * from './chaiExpressHttpClient';     // cli/testing
+
 export * from './Prompt';
 export * from './TerminalActivity';
+export * from './Terminal';
 export * from './WebTerminal';
-export * from './MinimalHttpClient';
-
-// export * from './ConsoleTerminal';           // exe/cli prompts
-// export * from './TerminalRestApiServer';     // exe/cli express
-// export * from './axiosHttpClient';           // cli/testing/cross cli/browser
-// export * from './chaiExpressHttpClient';     // cli/testing
+export * from './ConsoleTerminal';
 
 export * from './BaseService';
-export * from './TableServiceHost';
-export * from './TableService';
-export * from './Service';
+export * from './ServiceCenter';
+export * from './ServiceCenterClient';
 export * from './Table';
 export * from './Seat';
 export * from './User';
+
+export * from './TerminalRestApiServer';     // exe/cli express

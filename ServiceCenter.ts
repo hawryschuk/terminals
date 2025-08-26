@@ -8,69 +8,9 @@ import { Util } from "@hawryschuk-common";
 import { Terminal } from "./Terminal";
 import { Mutex } from "@hawryschuk-locking/Mutex";
 import { Prompt } from "./Prompt";
-
-export namespace Messaging {
-    export type Tables = {
-        type: 'tables';
-        tables: Array<{
-            id: string;
-            empty: number;
-        }>;
-    }
-    export type LoungeMessage = {
-        type: 'loungeMessage';
-        from: string;
-        message: string;
-    };
-    export type ServiceResult = {
-        type: 'end-service';
-        results: { winners: string[]; losers: string[]; };
-    };
-}
-
-export class Seat {
-    terminal?: Terminal;
-}
-
-export abstract class BaseService {
-    static USERS: number | number[] | '*';
-    static NAME: string;
-
-    constructor(public seats: Seat[]) { }
-
-    abstract start(): Promise<Messaging.ServiceResult['results']>;
-
-    async broadcast(message: any) { return await Promise.all(this.seats.map(t => t.terminal!.send(message))); }
-}
-
-export class Table<T extends BaseService> {
-    seats!: Seat[];
-    terminals!: Terminal[];
-    id = Util.UUID;
-    instance?: T;
-    result?: Awaited<ReturnType<BaseService['start']>>;
-
-    constructor(public service: typeof BaseService, seats: number, creator: Terminal) {
-        this.seats = new Array(seats).fill(0).map(() => new Seat);
-        this.terminals = [creator];
-    }
-
-    get finished() { return !!this.result }
-    get started() { return !!this.instance }
-    get running() { return this.started && !this.finished }
-    get empty() { return this.seats.filter(s => !s.terminal).length; }
-    get ready() { return this.seats.every(s => s.terminal?.input.ready) && !this.running; }
-
-    async broadcast(message: any) { return await Promise.all(this.terminals.map(t => t.send(message))); }
-
-    async start() {
-        await this.broadcast({ type: 'start-service' });
-        this.instance = new (this.service as any)(this.seats);
-        const results = this.result = await this.instance!.start();
-        delete this.instance;
-        await this.broadcast(<Messaging.ServiceResult>{ type: 'end-service', results });
-    }
-}
+import { Table } from "./Table";
+import { BaseService } from "./BaseService";
+import { Messaging } from "./Messaging";
 
 export class ServiceCenter {
 

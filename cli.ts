@@ -3,8 +3,6 @@
 // import { TerminalRestApiClient } from './TerminalRestApiClient';
 // import { axiosHttpClient } from './axiosHttpClient';
 import { ConsoleTerminal } from './ConsoleTerminal';
-import { HelloWorldService } from './HelloWorldService';
-import { MeetupsService } from './MeetupsService';
 import { WebTerminal } from './WebTerminal';
 import { Terminal } from './Terminal';
 import { Util } from '@hawryschuk-common';
@@ -58,11 +56,11 @@ Help: ts-node cli
 //     }
 // })();
 
-/** Sample of Console-Terminal App */
-if (process.argv.some(a => /--hello-world/.test(a))) new HelloWorldService(new ConsoleTerminal).play();
+// /** Sample of Console-Terminal App */
+// if (process.argv.some(a => /--hello-world/.test(a))) new HelloWorldService(new ConsoleTerminal).play();
 
-/** Sample of Two-Terminal App */
-if (process.argv.some(a => /--meetups/.test(a))) new MeetupsService(new ConsoleTerminal, new ConsoleTerminal).play();
+// /** Sample of Two-Terminal App */
+// if (process.argv.some(a => /--meetups/.test(a))) new MeetupsService(new ConsoleTerminal, new ConsoleTerminal).play();
 
 // /** Display the aws:apigateway websocket endpoint */
 // // if (process.argv.some(a => a.includes('--websockets'))) {

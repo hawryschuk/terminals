@@ -4,7 +4,7 @@ import { TerminalActivity } from './TerminalActivity';
 import { Prompt } from './Prompt';
 import { MinimalHttpClient } from './MinimalHttpClient';
 import { Mutex } from '@hawryschuk-locking/Mutex';
-import { axiosHttpClient } from 'axiosHttpClient';
+import { axiosHttpClient } from './axiosHttpClient';
 
 export class WebTerminal extends Terminal {
     static REFRESH = 750;    /** (ms) Frequency to pull updates from the server */

@@ -1,7 +1,8 @@
 import { Util } from "@hawryschuk-common";
 import { Terminal } from "./Terminal";
 import { expect } from "chai";
-import { ServiceCenter, BaseService } from "./ServiceCenter";
+import { ServiceCenter } from "./ServiceCenter";
+import { BaseService } from "BaseService";
 import { WebTerminal } from "WebTerminal";
 import { server } from "./WebTerminal.spec";
 import { ServiceCenterClient } from "ServiceCenterClient";
