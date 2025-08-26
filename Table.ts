@@ -1,4 +1,4 @@
-import { Util } from "@hawryschuk-common";
+import { Util } from "@hawryschuk-common/util";
 import { Messaging } from "./Messaging";
 import { Seat } from "./Seat";
 import { BaseService } from "./BaseService";
@@ -21,6 +21,7 @@ export class Table<T extends BaseService> {
     get started() { return !!this.instance; }
     get running() { return this.started && !this.finished; }
     get empty() { return this.seats.filter(s => !s.terminal).length; }
+    get full() { return !this.empty; }
     get ready() { return this.seats.every(s => s.terminal?.input.ready) && !this.running; }
 
     async broadcast(message: any) { return await Promise.all(this.terminals.map(t => t.send(message))); }
@@ -31,5 +32,6 @@ export class Table<T extends BaseService> {
         const results = this.result = await this.instance!.start();
         delete this.instance;
         await this.broadcast(<Messaging.ServiceResult>{ type: 'end-service', results });
+        await Promise.all(this.seats.map(seat => seat.terminal?.prompt({ type: "number", name: 'ready', resolved: 0, clobber: true })));
     }
 }

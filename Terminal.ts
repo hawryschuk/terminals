@@ -7,7 +7,6 @@ export { TerminalActivity } from './TerminalActivity';
 /** TODO: Document why this class is responsible for saving itself?? */
 
 export class Terminal extends Model {
-    public id!: string;
     public owner?: any;
     public history!: TerminalActivity[];
     public started!: number;
@@ -87,7 +86,7 @@ export class Terminal extends Model {
     get promptedActivity(): TerminalActivity[] {
         return this
             .history
-            .filter((item: any) => item.options && !('resolved' in item.options));
+            .filter((item: any) => item.type === 'prompt' && item.options && !('resolved' in item.options));
     }
 
     get prompts(): { [name: string]: Prompt[] } {
@@ -120,7 +119,8 @@ export class Terminal extends Model {
     get buffer(): string {
         return this.history
             .filter(item => item.type !== 'prompt' || item.options?.resolved !== undefined)
-            .map(item => item.message || (item.options?.resolved !== undefined ? `${item.options?.message} ${item.options?.resolved}` : item.options?.message))
+            .map(item => item.message || (item.options?.resolved !== undefined ? `${item.options?.message || item.options.name} ${item.options?.resolved}` : item.options?.message))
+            .map(item => typeof item === 'string' ? item : JSON.stringify(item))
             .join('\n');
     }
 
@@ -143,19 +143,35 @@ export class Terminal extends Model {
     }
 
     async prompt(options: Prompt, waitResult = true): Promise<any> {
-        if (this.finished) throw new Error('webterminal is finished')
-        if (options.clobber && this.prompts[options.name]) {
+        if (this.finished) throw new Error('finished');
+
+        // Overwrite the first one , and remove  : TODO : think , auto-clobber
+        let { history: { length: index } } = this;
+        let same = false;
+        if ((options.clobber || 'resolved' in options) && this.prompts[options.name]) {
             const indexes = this.prompts[options.name].map(o => this.history.findIndex(i => i.options === o));
-            for (const index of indexes) await this.respond(null, undefined, index);
+            index = indexes.pop()!;
+            for (const index of indexes) this.history[index].options!.resolved = null;
+            same = !!Util.equals(this.history[index].options, options);
+            if (!same) Object.assign(this.history[index], { options, time: Date.now() });
         }
-        const { history: { length } } = this;
-        this.history.push({ type: 'prompt', options, time: Date.now() });
+        // Add to the history
+        else {
+            this.history.push({ type: 'prompt', options, time: Date.now() });
+        }
+
         // await this.save();
-        this.notify(this.history[length]);
+        if (!same) this.notify(this.history[index]);
+
         const result = Util
-            .waitUntil(async () => this.finished || 'resolved' in (this.history[length]?.options || {}), { pause: 3 })
-            .then(() => this.history[length].options!.resolved)
-        // .then(result => options.choices ? options.choices![result].value : result);
+            .waitUntil(
+                async () => {
+                    if (this.finished) throw new Error('finished');
+                    return 'resolved' in (this.history[index]?.options || {});
+                },
+                { pause: 3 }
+            )
+            .then(() => this.history[index].options!.resolved);
         return waitResult ? await result : { result };
     }
 

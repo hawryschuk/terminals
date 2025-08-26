@@ -1,4 +1,4 @@
-import { Util } from '@hawryschuk-common';
+import { Util } from '@hawryschuk-common/util';
 import { Model } from '@hawryschuk-crypto';
 
 export class User extends Model {

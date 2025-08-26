@@ -1,0 +1,41 @@
+<h1> Terminal :: Service Center :: Sample </h1>
+
+<section class="middle" #scrollMe [scrollTop]="scrollTop$|async">
+    <code id="stdout" [ngClass]="{empty:!terminal.buffer}">
+        {{terminal.buffer}}
+    </code>
+
+    <ng-container *ngFor="let prompted of terminal.promptedActivity; let i = index">
+        <div class="prompt" *ngIf="prompted.options as prompt" [attr.data-index]="i">
+            <div class="message">{{prompt.message || prompt.name}}</div>
+
+            <form novalidate *ngIf="prompt.type=='number'"
+                (ngSubmit)="respond($event, prompt.name, number_input.value.length ? Number(number_input.value) : prompt.initial)">
+                <input name="number_input" #number_input type="number" [min]="prompt.min" [max]="prompt.max"
+                    [placeholder]="prompt.initial" [placeholder]="prompt.min + '-' + prompt.max">
+            </form>
+
+            <form novalidate *ngIf="prompt.type=='select'">
+                <br>
+                <fieldset [attr.data-disabled]="choice.disabled" *ngFor="let choice of prompt.choices; let i = index">
+                    <input id="choice{{i}}" name="choice" type="radio" [value]="choice.value"
+                        [attr.disabled]="choice.disabled?1:null"
+                        (keyup.enter)="respond($event, prompt.name, choice.value)" />
+                    <label (click)="respond($event, prompt.name, choice.value)"
+                        [title]="choice.description">{{choice.title}}</label>
+                </fieldset>
+            </form>
+
+            <form novalidate *ngIf="prompt.type=='text'">
+                <input #input [placeholder]="prompt.initial || ''" type="text" value
+                    (keyup.enter)="respond($event, prompt.name, input.value || prompt.initial)">
+            </form>
+
+            <ng-container *ngIf="prompt.type=='confirm' || prompt.type=='toggle'">
+                <button (click)="respond($event, prompt.name, false)">no</button>
+                <button (click)="respond($event, prompt.name, true)">yes</button>
+            </ng-container>
+        </div>
+    </ng-container>
+
+</section>

@@ -10,7 +10,7 @@ permissions:
   id-token: write
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Setup Node
@@ -52,14 +52,20 @@ jobs:
         run: npm ci
         working-directory: "@hawryschuk-crypto"
       
+      - name: Build Sample UI
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
       - name: Test
         run: npm t
 
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+  # build:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
 
       - name: Install dependencies
         run: |
@@ -71,6 +77,11 @@ jobs:
         run: |
           pandoc README.md --standalone --to html5 --filter pandoc-plantuml -o index.html
           rm -rf dist && mkdir dist && cp -r CNAME *.html plantuml-images/ dist
+
+      - name: Copy sample ui app
+        run: |
+          mkdir dist/sample
+          cp -r frontend/dist/sample/browser/* dist/sample/
 
       - name: Debug dist folder
         run: |

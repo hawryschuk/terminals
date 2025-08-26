@@ -1,4 +1,4 @@
-import { Util } from "@hawryschuk-common";
+import { Util } from "@hawryschuk-common/util";
 import { MinimalHttpClient } from "./MinimalHttpClient";
 import { Messaging } from "./Messaging";
 import { BaseService } from "./BaseService";
@@ -54,6 +54,16 @@ export class ServiceCenterClient {
             await terminal.request({ method: 'get', url: 'service', body: { id: terminal.id } });
         }
         return new ServiceCenterClient(terminal!);
+    }
+
+    get Menu() {
+        return Util.waitUntil(async () => {
+            const [prompt] = await Util.waitUntil(() => this.terminal.prompts.menu);
+        });
+    }
+
+    async RefreshMenu() {
+        this.SelectMenu('Refresh');
     }
 
     async SelectMenu(title: string) {

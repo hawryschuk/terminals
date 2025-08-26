@@ -1,0 +1,35 @@
+$topheight: 60px;
+$promptheight: 200px;
+$fontsize: 12pt;
+
+section.middle {
+    
+    height: 100%;
+    overflow: auto;
+    display: block;
+    white-space: pre;
+    &,input {
+        font-family: 'consolas', 'Courier New', Courier, monospace;
+        font-size: 12pt;
+        background-color: black;
+        color: white;
+        outline: none;
+        border: 0;
+    }
+
+    #stdout {
+        height: calc(100vh - #{$topheight} - #{$topheight} - #{$promptheight});
+        &.empty { height: 0; display: block; }        
+    }
+
+    .prompt {        
+        height: $promptheight;
+        .message { float: left; font-weight: bold; margin-right: 10px; }
+        fieldset{border:0;padding:0}
+        fieldset[data-disabled=true]{ color: grey; }
+        input[type=radio]{ opacity: 0%; }
+        input[type=radio]:checked + label:before    { content: ">"; }
+        input[type=number]                          { -moz-appearance:textfield; width: 200px; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button  { -webkit-appearance: none; }
+    }
+}

@@ -5,7 +5,8 @@
 import { ConsoleTerminal } from './ConsoleTerminal';
 import { WebTerminal } from './WebTerminal';
 import { Terminal } from './Terminal';
-import { Util } from '@hawryschuk-common';
+import { Util } from '@hawryschuk-common/util';
+
 // // AWS.config.update({ region: 'us-east-1' });
 // // TerminalRestApiClient.httpClient = axiosHttpClient('https://96fh0ga37c.execute-api.us-east-1.amazonaws.com/prod');
 

@@ -1,39 +1,11 @@
-import { Util } from "@hawryschuk-common";
+import { Util } from "@hawryschuk-common/util";
 import { Terminal } from "./Terminal";
 import { expect } from "chai";
 import { ServiceCenter } from "./ServiceCenter";
-import { BaseService } from "BaseService";
 import { WebTerminal } from "WebTerminal";
 import { server } from "./WebTerminal.spec";
-import { ServiceCenterClient } from "ServiceCenterClient";
-
-/** For testing only */
-namespace TestingServices {
-    export class BrowniePoints extends BaseService {
-        static NAME = 'Brownie Points';
-        static USERS = 1;
-
-        async start() { return { winners: this.seats.map(s => s.terminal!.id), losers: [] } }
-    }
-    export class GuessingGame extends BaseService {
-        static NAME = 'Guessing Game';
-        static USERS = [1, 2];
-        async start() {
-            const min = 1, max = 10;
-            const random = Util.random({ min, max });
-            await this.broadcast(`A random number has been chosen. Prompting each player to guess what it is.`)
-            await Promise.all(this.seats.map(seat => seat.terminal!.prompt({ name: 'guess', message: `Guess a number between ${min} and ${max}`, min, max, type: 'number' })));
-            const mapped = this
-                .seats
-                .map(seat => ({ seat, distance: Math.abs(random - seat.terminal!.input.guess) }))
-                .sort((a, b) => a.distance - b.distance);
-            const winners = mapped.filter(item => item.distance === mapped[0].distance).map(item => item.seat.terminal!);
-            const losers = this.seats.map(seat => seat.terminal!).filter(terminal => !winners.includes(terminal));
-            await this.broadcast(`Every player has made their guess. The random number was ${random}. The winners are: ${winners.map(w => w.input.name).join(', ')}`);
-            return { winners: Util.pluck(winners, 'id'), losers: Util.pluck(losers, 'id') };
-        }
-    }
-}
+import { ServiceCenterClient } from "./ServiceCenterClient";
+import { TestingServices } from "./TestingServices";
 
 /** Test the service center : 1) Locally, 2) Remote (Terminal Services) */
 for (const type of ['local', 'remote'])
@@ -63,8 +35,7 @@ for (const type of ['local', 'remote'])
         });
 
         it('Allows registering services', () => {
-            serviceCenter.register(TestingServices.BrowniePoints);
-            serviceCenter.register(TestingServices.GuessingGame);
+            serviceCenter.register(TestingServices.BrowniePoints, TestingServices.GuessingGame);
         });
 
         it('Displays registered services', () => {
@@ -108,7 +79,7 @@ for (const type of ['local', 'remote'])
         });
 
         it('Lets the user select a service', async () => {
-            await client.SetService(TestingServices.BrowniePoints.NAME);
+            await client.SetService(TestingServices.GuessingGame.NAME);
         });
 
         it('Lets the user list tables', async () => {
@@ -118,7 +89,7 @@ for (const type of ['local', 'remote'])
         });
 
         it('Lets the user create a table', async () => {
-            expect(await client.CreateTable()).to.be.ok;
+            expect(await client.CreateTable(1)).to.be.ok;
         });
 
         it('Lets the user leave a table', async () => {
@@ -134,10 +105,19 @@ for (const type of ['local', 'remote'])
         });
 
         it('Lets the user signal they are ready', async () => {
+            Object.assign(globalThis, { client });
             await client.Ready();
         });
 
-        it('Is notified when the service begins - and what the results were : Brownie Points -- Zero Interaction', async () => {
+        it('Indicates the service has started when all the users have indicated they are ready', async () => {
+            await Util.waitUntil(() => client.ServiceStarted);
+        });
+
+        it('Lets the Service begin to operate the terminals ( when the service is running )', async () => {
+            await client.terminal.answer({ guess: 4 });
+        });
+
+        it('Indicates when the service has finished -- and what the results were', async () => {
             const results = await Util.waitUntil(() => client.ServiceEnded);
             expect(results!.winners.includes(terminal.id));
         });
@@ -172,6 +152,10 @@ for (const type of ['local', 'remote'])
             expect(results.winners[0] !== results.losers[0]).to.be.ok;
             expect([terminal2.id, terminal3.id].includes(results.winners[0]));
             expect([terminal2.id, terminal3.id].includes(results.losers[0]));
+        });
+
+        it('After the game finishes, the user is unready and needs to renew their readiness to start the service again', async () => {
+            await Util.waitUntil(() => !client.terminal.input.ready);
         });
 
     });

@@ -1,4 +1,4 @@
-import { Util } from '@hawryschuk-common';
+import { Util } from '@hawryschuk-common/util';
 import { Terminal } from './Terminal';
 import { TerminalActivity } from './TerminalActivity';
 import { Prompt } from './Prompt';
@@ -76,6 +76,7 @@ export class WebTerminal extends Terminal {
                     const index = this.history.findIndex((item, index) => index >= length && item.type === 'prompt' && item.options?.name === options.name);
                     if (index >= 0) return { index };
                 }
+                return undefined;
             }))!;
         });
 
