@@ -1,0 +1,93 @@
+name: Test & Deploy
+
+on:
+  push:
+    branches: [ main ] 
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install
+        run: npm ci
+
+      - name: Checkout @hawryschuk-common
+        uses: actions/checkout@v4
+        with:
+          repository: hawryschuk/common
+          path: "@hawryschuk-common"
+      - name: Install @hawryschuk-common
+        run: npm ci
+        working-directory: "@hawryschuk-common"
+
+      - name: Checkout @hawryschuk/locking
+        uses: actions/checkout@v4
+        with:
+          repository: hawryschuk/locking
+          token: ${{ secrets.PRIVATE_PAT }}
+          path: "@hawryschuk-locking"
+      - name: Install @hawryschuk/locking
+        run: npm ci
+        working-directory: "@hawryschuk-locking"
+
+      - name: Checkout @hawryschuk/crypto
+        uses: actions/checkout@v4
+        with:
+          repository: hawryschuk/crypto
+          token: ${{ secrets.PRIVATE_PAT }}
+          path: "@hawryschuk-crypto"
+      - name: Install @hawryschuk/crypto
+        run: npm ci
+        working-directory: "@hawryschuk-crypto"
+      
+      - name: Test
+        run: npm t
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          # sudo apt-get update
+          sudo apt-get install -y pandoc plantuml
+          pip install pandoc-plantuml-filter
+
+      - name: Build HTML from Markdown
+        run: |
+          pandoc README.md --standalone --to html5 --filter pandoc-plantuml -o index.html
+          rm -rf dist && mkdir dist && cp -r CNAME *.html plantuml-images/ dist
+
+      - name: Debug dist folder
+        run: |
+          echo "Contents of dist:"
+          ls -R dist
+
+      - name: Upload dist artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

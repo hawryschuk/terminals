@@ -11,7 +11,7 @@ An example is as follows: A Service called "Guessing Game" generates a random nu
 
 ```plantuml
 @startuml
-title Terminal
+title Terminal Services : Business Model / Class Diagrams
 
 class Terminal {
     prompts <<get>>
@@ -67,7 +67,7 @@ TerminalServer o-- WebTerminal
 
 ```plantuml
 @startuml
-    title Service Center : Where Service Producers and Consumers Meet
+    title Service Center : Where Service Producers and Consumers Meet : Business Model
     class User {
         id
         publicKey
@@ -135,7 +135,7 @@ TerminalServer o-- WebTerminal
 
 ```plantuml
 @startuml
-title Service Center
+title Service Center : User Flow Sequence Diagram
 
 actor User
 participant Server
@@ -227,26 +227,28 @@ actor Player1
 actor Player2
 participant Game
 
-== Start ==
-Player1 -> Game: Join game
-Player2 -> Game: Join game
-activate Game
+== Initialize ==
+loop For each player
+    Player1 -> Game: Join game
+    Player1 -> Game: Take seat
+    Player1 -> Game: Indicate Ready
+end
+
+== Run ==
 note over Game
   Generate random number N in [1..10]
 end note
 
-== Collect guesses ==
 loop For each player
   Game -> Player1: "Guess a number (1..10)"
   Player1 --> Game: guess g1
 end
 
-== Decide winners ==
 note over Game
   Determine winners: players where guess == N
 end note
 
-== Notify results ==
+== Results ==
 loop For each player
   alt Player guessed correctly (g == N)
     Game -> Player1: You WON!

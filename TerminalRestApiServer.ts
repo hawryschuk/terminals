@@ -3,6 +3,8 @@ import { Terminal } from './Terminal';
 import { User } from './User';
 import { MemoryStorage, ORM } from '@hawryschuk-crypto';
 import { Mutex } from '@hawryschuk-locking/Mutex';
+import { ServiceCenter } from './ServiceCenter';
+
 // export const atomic = (resource: string, block: any) => Mutex.getInstance({ TableName: 'test', resource }).use({ block });
 
 /** The "Terminal Services Rest API Server" is a REST-API Server Application, using Node-Express,
@@ -31,7 +33,10 @@ import { Mutex } from '@hawryschuk-locking/Mutex';
 export class TerminalRestApiServer {
     static models = { Terminal, User };    // The data models used by this server that are persisted online 
 
-    constructor(private dao = new ORM().Register(new MemoryStorage, TerminalRestApiServer.models),) { }
+    constructor(
+        public dao = new ORM().Register(new MemoryStorage, TerminalRestApiServer.models),
+        public serviceCenter = new ServiceCenter,
+    ) { }
 
     private atomic(resource: string, block: any) { return Mutex.getInstance(resource).use({ block }); }
 
@@ -42,6 +47,21 @@ export class TerminalRestApiServer {
         .use(async (req, res, next) => {
             res.append('x-terminal-rest-api-version', '1.0.0');
             next();
+        })
+
+        /** Connect the service  */
+        .get('/service', async (req, res) => {
+            const { id } = req.body;
+            const terminal = await this.dao.retrieve(Terminal, id);
+            if (!this.serviceCenter)
+                res.send(500).json({ error: 'no-service-center' })
+            else if (terminal)
+                await this.serviceCenter!
+                    .join(terminal)
+                    .then(() => res.json({ success: true }))
+                    .catch(e => res.status(500).json({ error: e.message }));
+            else
+                res.status(404);
         })
 
         /** 1) Create a new terminal : As an externally running application, I want to interface with users online, and will create Terminals to do so */

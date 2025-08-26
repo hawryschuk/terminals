@@ -73,6 +73,17 @@ export class Terminal extends Model {
         return this.history.slice(-1)[0]
     }
 
+
+    get prompts2() {
+        return this
+            .history
+            .filter((item: any) => item.type === 'prompt' && item.options)
+            .reduce((all, item) => {
+                (all[item.options!.name] ||= []).push(item.options!);
+                return all;
+            }, {} as { [name: string]: Prompt[] });
+    }
+
     get promptedActivity(): TerminalActivity[] {
         return this
             .history
@@ -144,7 +155,7 @@ export class Terminal extends Model {
         const result = Util
             .waitUntil(async () => this.finished || 'resolved' in (this.history[length]?.options || {}), { pause: 3 })
             .then(() => this.history[length].options!.resolved)
-            // .then(result => options.choices ? options.choices![result].value : result);
+        // .then(result => options.choices ? options.choices![result].value : result);
         return waitResult ? await result : { result };
     }
 

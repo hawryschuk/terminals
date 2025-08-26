@@ -76,7 +76,7 @@ export class ServiceCenter {
 
     tables: Table<BaseService>[] = [];
 
-    constructor() { this.maintain(); }
+    constructor() { this.maintain().catch(e => { console.error(e); this.finish(); }); }
 
     /** Register each [unique] service with a unique ID */
     readonly registry: Record<string, typeof BaseService> = {};
@@ -88,6 +88,7 @@ export class ServiceCenter {
 
     readonly terminals: Array<Terminal> = [];
     async join(terminal: Terminal) {
+        if (this.terminals.includes(terminal)) throw new Error('already-joined');
         this.terminals.push(terminal);
         await terminal.send({
             type: 'services',
@@ -98,7 +99,10 @@ export class ServiceCenter {
     }
 
     finished?: Date;
-    finish() { this.finished ||= new Date }
+    finish() {
+        this.finished ||= new Date;
+        this.terminals.forEach(t => t.finish());
+    }
 
     get Names() { return this.terminals.map(t => t.input.Name).filter(Boolean); }
 
@@ -144,7 +148,7 @@ export class ServiceCenter {
                             name: 'service',
                             choices: Object
                                 .entries(this.registry)
-                                .map(([value, { NAME: title }]) => ({ value, title }))
+                                .map(([value, { NAME: title, USERS }]) => ({ value, title, USERS }))
                         }, false);
                     }
 
@@ -154,19 +158,21 @@ export class ServiceCenter {
                         const table = Util.findWhere(this.tables, { id: terminal.input.table });
                         const seat = table && Util.findWhere(table.seats, { terminal });
                         const tables = Util.where(this.tables, { service });
+                        const ListTables = async () => {
+                            await terminal.send(<Messaging.Tables>{
+                                type: 'tables',
+                                tables: this.tables.map(table => ({
+                                    id: table.id,
+                                    empty: table.empty,
+                                    seats: table.seats.length
+                                }))
+                            })
+                        };
                         const choices: Prompt['choices'] = [
                             {
                                 title: 'List Tables',
                                 disabled: !!table,
-                                value: async () => {
-                                    await terminal.send(<Messaging.Tables>{
-                                        type: 'tables',
-                                        tables: this.tables.map(table => ({
-                                            id: table.id,
-                                            empty: table.empty
-                                        }))
-                                    })
-                                }
+                                value: ListTables
                             },
                             {
                                 title: 'Create Table',
@@ -182,6 +188,7 @@ export class ServiceCenter {
                                     })();
                                     const table = new Table(service, seats, terminal);
                                     this.tables.push(table);
+                                    await ListTables();
                                     await terminal.prompt({ type: 'text', name: 'table', resolved: table.id });
                                 }
                             },
@@ -249,7 +256,6 @@ export class ServiceCenter {
             }
             await Util.pause(100);
         }
-        for (const terminal of this.terminals) terminal.finish();
     }
 
 }

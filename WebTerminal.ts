@@ -7,35 +7,53 @@ import { Mutex } from '@hawryschuk-locking/Mutex';
 import { axiosHttpClient } from 'axiosHttpClient';
 
 export class WebTerminal extends Terminal {
+    static REFRESH = 750;    /** (ms) Frequency to pull updates from the server */
     static httpClient: MinimalHttpClient;
 
     /** Create a new terminal, optionally assigning ownership, and/or history */
-    public static async connect({ baseuri, id, owner }: {
+    public static async connect({ baseuri, id, owner, httpClient, refresh }: {
         baseuri?: string;
         id?: string;
         owner?: any;
-    } = {}): Promise<any> {
-        const httpClient = baseuri ? axiosHttpClient(baseuri) : this.httpClient;
-        const data = await httpClient({ method: 'get', url: `terminal`, body: { id, owner } });
-        const terminal = new WebTerminal({ ...data, baseuri });
+        httpClient?: MinimalHttpClient;
+        refresh?: number;
+    } = {}) {
+        const terminal = new WebTerminal({ id, baseuri, httpClient, refresh });
+        Object.assign(terminal, await terminal.request({ method: 'get', url: `terminal`, body: { id, owner } }));
+        await terminal.synchronize();
         terminal.maintain();
         return terminal;
     }
 
+    private async maintain() {
+        while (!this.finished) {
+            await Util.pause(this.refresh);
+            await this.synchronize();
+        }
+    }
+
     /** WebTerminals synchronize with an online server through REST-API and WebSockets */
     public baseuri?: string;
+    public httpClient?: MinimalHttpClient;
+    public refresh!: number;
 
-    get httpClient(): MinimalHttpClient { return (this as any)[Symbol.for('httpClient')] || WebTerminal.httpClient || this.baseuri && axiosHttpClient(this.baseuri!) || undefined }
-    set httpClient(client: MinimalHttpClient) { (this as any)[Symbol.for('httpClient')] = client }
+    get request(): MinimalHttpClient {
+        return this.httpClient
+            || this.baseuri && axiosHttpClient(this.baseuri!)
+            || WebTerminal.httpClient
+            || undefined
+    }
 
-    constructor({ id, owner, history = [], baseuri }: {
-        id: string;
+    constructor({ id, owner, history = [], httpClient, baseuri, refresh = WebTerminal.REFRESH }: {
+        id?: string;
         owner?: any;
         history?: TerminalActivity[];
         baseuri?: string;
+        refresh?: number;
+        httpClient?: MinimalHttpClient
     }) {
         super({ id, owner, history });
-        this.baseuri = baseuri;
+        Object.assign(this, { baseuri, httpClient, refresh });
     }
 
     private atomic<T>(block: () => Promise<T>): Promise<T> { return Mutex.getInstance(`WebTerminal::${this.id}`).use({ block }); }
@@ -43,7 +61,7 @@ export class WebTerminal extends Terminal {
     override async send(message: any) {
         return await this.atomic(async () => {
             const { history: { length } } = this;
-            await this.httpClient({ method: 'put', url: `terminal/${this.id}`, body: { type: 'stdout', message } });
+            await this.request({ method: 'put', url: `terminal/${this.id}`, body: { type: 'stdout', message } });
             await Util.waitUntil(() => this.history.length > length);
         });
     }
@@ -51,7 +69,7 @@ export class WebTerminal extends Terminal {
     override async prompt(options: Prompt, waitResult = true) {
         const { index } = await this.atomic(async () => {
             const { history: { length } } = this;
-            await this.httpClient({ method: 'put', url: `terminal/${this.id}`, body: { type: 'prompt', options } });
+            await this.request({ method: 'put', url: `terminal/${this.id}`, body: { type: 'prompt', options } });
             return (await Util.waitUntil(() => {
                 if (this.finished) throw new Error('finished');
                 if (this.history.length > length) {
@@ -67,7 +85,7 @@ export class WebTerminal extends Terminal {
                 return 'resolved' in (this.history[index].options || {})
             })
             .then(() => this.history[index]!.options!.resolved)
-            // .then(result => options.choices ? options.choices[result].value : result);
+        // .then(result => options.choices ? options.choices[result].value : result);
 
         return waitResult ? await result : { result };
     }
@@ -82,7 +100,7 @@ export class WebTerminal extends Terminal {
             name ??= this.history[index]?.options?.name;
             if (this.history[index]?.options?.name !== name) throw new Error('not-prompted-for-same-name');
 
-            await this.httpClient({ method: 'post', url: `terminal/${this.id}/response`, body: { value, index, name } });
+            await this.request({ method: 'post', url: `terminal/${this.id}/response`, body: { value, index, name } });
 
             const options = await Util.waitUntil(() => {
                 if (this.finished) throw new Error('finished');
@@ -97,8 +115,8 @@ export class WebTerminal extends Terminal {
     }
 
     override async finish() {
-        await this.httpClient({ method: 'delete', url: `terminal/${this.id}` });
         await super.finish();
+        await this.request({ method: 'delete', url: `terminal/${this.id}` });
     }
 
     /** Synchronize the last activity fetched online into this instance */
@@ -107,7 +125,9 @@ export class WebTerminal extends Terminal {
         const index = this.prompted ? this.history.findIndex(i => i.options === this.prompted) : this.history.length;
         const after = [
             ...before.slice(0, index),
-            ...await this.httpClient({ method: 'get', url: `terminal/${this.id}/history?start=${index}` })
+            ...await this
+                .request({ method: 'get', url: `terminal/${this.id}/history?start=${index}` })
+                .catch(e => { this.finish(); throw e; })
         ];
         const changed = !Util.equalsDeep(before, after);
         for (let i = 0; i < after.length; i++) {
@@ -119,15 +139,4 @@ export class WebTerminal extends Terminal {
         return { changed };
     }
 
-    /** Maintain synchronicity with the state persisted in the online-server */
-    private async maintain() {
-        while (!this.finished)
-            await this
-                .synchronize()
-                .then(() => Util.pause(WebTerminal.REFRESH))
-                .catch(error => { super.finish(); throw error; });
-    }
-
-    /** (ms) Frequency to pull updates from the server */
-    static REFRESH = 750;
 }
