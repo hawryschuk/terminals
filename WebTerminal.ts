@@ -111,7 +111,7 @@ export class WebTerminal extends Terminal {
 
             if (options!.resolved !== value) throw new Error('resolved-with-something-else');
 
-            this.notify(this.history[index]);
+            this.notify(index);
         });
     }
 
@@ -134,7 +134,7 @@ export class WebTerminal extends Terminal {
         for (let i = 0; i < after.length; i++) {
             if (!Util.equalsDeep(before[i], after[i])) {
                 await Object.assign(this, { history: Object.assign([...this.history], { [i]: after[i] }) }).save();
-                this.notify(this.history[i]);
+                this.notify(i);
             }
         }
         return { changed };

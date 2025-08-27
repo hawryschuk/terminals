@@ -13,7 +13,7 @@ export class Terminal extends Model {
     public finished?: Date;
     public autoanswer?: { [promptName: string]: any[] };
 
-    get available() { return !this.owner && !this.finished }
+    get available() { return !!this.owner && !this.finished; }
 
     async finish() { this.finished ||= new Date(); }
 
@@ -33,14 +33,13 @@ export class Terminal extends Model {
         super({ ...data, id, history, autoanswer, started });
     }
 
-    get subscribers(): { handler: Function; event?: string; }[] { return (this as any)[Symbol.for('subscribers')] ||= []; }
-
-    subscribe(options: { handler: Function; event?: string; }) {
+    subscribe(options: { handler: (index?: number) => any; event?: string; }) {
         this.subscribers.push(options);
-        return () => Util.removeElements(this.subscribers, options);
+        return { unsubscribe: () => Util.removeElements(this.subscribers, options) };
     }
 
-    async notify(event: any = this.last) { await Promise.all(this.subscribers.map(s => s.handler(event))); }
+    private get subscribers(): { handler: (index?: number) => any; event?: string; }[] { return (this as any)[Symbol.for('subscribers')] ||= []; }
+    protected async notify(index: number) { await Promise.all(this.subscribers.map(s => s.handler(index))); }
 
     /** Get the answers to the questions prompted 
      * -- Will erase old answers when re-prompted and unresolved
@@ -132,8 +131,7 @@ export class Terminal extends Model {
     async send<T = any>(message: T) {
         if (this.finished) throw new Error('webterminal is finished');
         this.history.push({ type: 'stdout', message, time: Date.now() });
-        // await this.save();
-        this.notify();
+        this.notify(this.history.length - 1);
     }
 
     /** Provide answers to multiple prompts which can carry into the future */
@@ -171,7 +169,9 @@ export class Terminal extends Model {
         }
 
         // await this.save();
-        if (!same) this.notify(this.history[index]);
+        if (!same) this.notify(index);
+
+        const clobbered = index === this.history.length;
 
         const result = Util
             .waitUntil(
@@ -182,7 +182,7 @@ export class Terminal extends Model {
                 { pause: 3 }
             )
             .then(() => this.history[index].options!.resolved);
-        return waitResult ? await result : { result };
+        return waitResult ? await result : { result, clobbered };
     }
 
     async respond(value: any, name?: string, index?: number) {
@@ -197,7 +197,7 @@ export class Terminal extends Model {
         item.options.resolved = value;
         this.history[index] = item;
         // await this.save();
-        this.notify(this.history[index]);
+        this.notify(index);
     }
 
 }

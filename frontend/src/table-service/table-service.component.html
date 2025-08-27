@@ -9,106 +9,120 @@
     <!-- 1 : Connect -->
     <button id="disconnected" *ngIf="!connected && !connecting" (click)="connect()"> Connect </button>
 
+    <!-- 2 : Provide Name -->
+    <form novalidate id="enter-name" *ngIf="terminal.prompts.name"
+        (ngSubmit)="terminal.respond(name.value,'name'); $event.preventDefault()">
+        <input #name placeholder="Name">
+    </form>
+
+    <!-- 3 : Select Service -->
+    <form id="select-service" *ngIf="terminal.prompts.service?.[0] as prompt">
+        <h3> Select Service </h3>
+        <button *ngFor="let choice of prompt.choices" (click)="terminal.respond(choice.value, 'service')">
+            {{choice.title}}
+        </button>
+    </form>
+
     <div *ngIf="connected" id="connected">
 
-        <!-- 2 : Provide Name -->
-        <form id="enter-name" *ngIf="terminal.prompts.name" (ngSubmit)="terminal.respond(name.value,'name')">
-            <input #name placeholder="Name">
-        </form>
-
-        <div id="everyone">
-            <h3> Everyone </h3>
-            <ol>
-                <li *ngFor="let user of Client.Users!.Online"> {{ user.name }} </li>
-            </ol>
-            <form *ngIf="menu?.includes('Message Everyone')"
-                (ngSubmit)="publicMessage.value && client.Message.Everyone(publicMessage.value); publicMessage.value = ''; ">
-                <ul>
-                    <li *ngFor="let message of Client.Messages!.Everyone">
-                        {{ message.time }} : {{ message.from }} : {{ message.message }}
-                    </li>
-                </ul>
-                <input #publicMessage placeholder="public chat" />
-            </form>
-        </div>
-
-        <!-- 3 : Select Service -->
-        <form id="select-service" *ngIf="terminal.prompts.service?.[0] as prompt">
-            <h3> Select Service </h3>
-            <button *ngFor="let choice of prompt.choices" (click)="terminal.respond(choice.value, 'service')">
-                {{choice.title}}
-            </button>
-        </form>
-
-        <div id="create-table">
-            <button *ngIf="menu?.includes('Create Table')" (click)="client.CreateTable()"> Create Table </button>
-
-            <div *ngIf="terminal.prompts.seats?.[0] as seats">
-                <button *ngFor="let seat of seats.choices" (click)="terminal.respond(seat.value,'seats')">
-                    {{seat.value}}
-                </button>
+        <div id="service-center-related">
+            <div id="everyone">
+                <h3> Everyone </h3>
+                <ol>
+                    <li *ngFor="let user of Client.Users!.Online"> {{ user.name }} </li>
+                </ol>
+                <form *ngIf="menu?.includes('Message Everyone')"
+                    (ngSubmit)="publicMessage.value && client.Message.Everyone(publicMessage.value); publicMessage.value = ''; ">
+                    <ul>
+                        <li *ngFor="let message of Client.Messages!.Everyone">
+                            {{ message.time }} : {{ message.from }} : {{ message.message }}
+                        </li>
+                    </ul>
+                    <input #publicMessage placeholder="public chat" />
+                </form>
             </div>
-        </div>
 
-        <div id="Lounge">
-            <h4> Lounge </h4>
-            <table>
-                <tr *ngFor="let user of Client.Users!.Service">
-                    <td>{{user.name}}</td>
-                    <td>{{user.table}}</td>
-                </tr>
-            </table>
+            <div id="create-table">
+                <button *ngIf="menu?.includes('Create Table')" (click)="client.CreateTable()"> Create Table </button>
 
-            <form id="lounge-chat" *ngIf="menu?.includes('Message Lounge')"
-                (ngSubmit)="loungeMessage.value && client.Message.Lounge(loungeMessage.value); loungeMessage.value = ''; ">
-                <ul>
-                    <li *ngFor="let message of Client.Messages!.Lounge">
-                        {{ message.time }} : {{ message.from }} : {{ message.message }}
+                <div *ngIf="terminal.prompts.seats?.[0] as seats">
+
+                    <ng-container *ngIf="seats.type=='number'">
+                        <form (ngSubmit)="seats.value && terminal.respond(seats.value,'seats')">
+                            <input #seats type="number" min="1" step="1" required placeholder="# Seats">
+                        </form>
+                    </ng-container>
+
+                    <ng-container *ngIf="seats.choices">
+                        <h4> # Seats </h4>
+                        <button *ngFor="let seat of seats.choices" (click)="terminal.respond(seat.value,'seats')">
+                            {{seat.value}}
+                        </button>
+                    </ng-container>
+
+                </div>
+            </div>
+
+            <div id="Lounge">
+                <h4> Lounge </h4>
+                <table>
+                    <tr *ngFor="let user of Client.Users!.Service">
+                        <td>{{user.name}}</td>
+                        <td>{{user.table}}</td>
+                    </tr>
+                </table>
+
+                <form id="lounge-chat" *ngIf="menu?.includes('Message Lounge')"
+                    (ngSubmit)="loungeMessage.value && client.Message.Lounge(loungeMessage.value); loungeMessage.value = ''; ">
+                    <ul>
+                        <li *ngFor="let message of Client.Messages!.Lounge">
+                            {{ message.time }} : {{ message.from }} : {{ message.message }}
+                        </li>
+                    </ul>
+                    <input #loungeMessage placeholder="lounge chat" />
+                </form>
+
+            </div>
+
+            <div id="table" *ngIf="terminal.input.table">
+
+                <h4> Table </h4>
+                <form id="table-chat" *ngIf="menu?.includes('Message Table')"
+                    (ngSubmit)="tableMessage.value && client.Message.Table(tableMessage.value); tableMessage.value = ''; ">
+                    <ul>
+                        <li *ngFor="let message of Client.Messages!.Table">
+                            {{ message.time }} : {{ message.from }} : {{ message.message }}
+                        </li>
+                    </ul>
+                    <input #tableMessage placeholder="table chat" />
+                </form>
+
+                <button *ngIf="menu?.includes('Sit')" (click)="client.Sit()"> Sit </button>
+
+                <button *ngIf="menu?.includes('Stand')" (click)="client.Stand()"> Stand </button>
+
+                <button *ngIf="menu?.includes('Ready')" (click)="client.Ready()"> Ready </button>
+
+                <h5> Observers </h5>
+                <ol id="standing">
+                    <li *ngFor="let name of client.Table!.standing"> {{ name }} </li>
+                </ol>
+
+                <h5> Seats </h5>
+                <ol id="seats">
+                    <li *ngFor="let name of client.Table!.sitting"
+                        [attr.data-ready]="client.Table!.ready.includes(name!)" [attr.data-empty]="!name">
+                        {{ name || 'empty' }}
                     </li>
-                </ul>
-                <input #loungeMessage placeholder="lounge chat" />
-            </form>
 
-        </div>
-
-        <div id="table" *ngIf="terminal.input.table">
-
-            <h4> Table </h4>
-            <form id="table-chat" *ngIf="menu?.includes('Message Table')"
-                (ngSubmit)="tableMessage.value && client.Message.Table(tableMessage.value); tableMessage.value = ''; ">
-                <ul>
-                    <li *ngFor="let message of Client.Messages!.Table">
-                        {{ message.time }} : {{ message.from }} : {{ message.message }}
-                    </li>
-                </ul>
-                <input #tableMessage placeholder="table chat" />
-            </form>
-
-            <button *ngIf="menu?.includes('Sit')" (click)="client.Sit()"> Sit </button>
-
-            <button *ngIf="menu?.includes('Stand')" (click)="client.Stand()"> Stand </button>
-
-            <button *ngIf="menu?.includes('Ready')" (click)="client.Ready()"> Ready </button>
-
-            <h5> Observers </h5>
-            <ol id="standing">
-                <li *ngFor="let name of client.Table!.standing"> {{ name }} </li>
-            </ol>
-
-            <h5> Seats </h5>
-            <ol id="seats">
-                <li *ngFor="let name of client.Table!.sitting" [attr.data-ready]="client.Table!.ready.includes(name!)"
-                    [attr.data-empty]="!name">
-                    {{ name || 'empty' }}
-                </li>
-
-            </ol>
+                </ol>
+            </div>
         </div>
 
         <div *ngIf="terminal.input.service && terminal.input.table" class="service-view">
 
             <ng-content></ng-content>
-            
+
         </div>
     </div>
 </div>

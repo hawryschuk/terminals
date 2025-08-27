@@ -1,16 +1,24 @@
 .container {
     height: 100%;
     overflow: auto;
-}
 
-#seats [data-ready=false] {
-    color: yellow;
-}
+    #service-center-related {
+        display: flex;
+        flex-direction: row;
 
-#seats [data-empty=true] {
-    color: red;
-}
+        #seats {
+            & [data-ready=false] {
+                color: yellow;
+            }
 
-#seats [data-ready=true] {
-    color: green;
+            & [data-empty=true] {
+                color: red;
+            }
+
+            & [data-ready=true] {
+                color: green;
+            }
+        }
+
+    }
 }

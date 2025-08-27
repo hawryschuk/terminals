@@ -1,27 +1,21 @@
 <div class="container">
+
   <h1> Terminal :: Service Center :: Sample </h1>
 
-  <app-table-service [terminal]="terminal">
-
+  <app-table-service [terminal]="terminal" [offline]="true">
+    <!-- Here we can put the UI interfaces for our services -->
+    <div *ngIf="terminal.input.service == 'Brownie Points'"> You Won!!! </div>
     <div *ngIf="terminal.input.service == 'Guessing Game'">
       <h3> !! Guessing Game !! </h3>
-
       <div class="won" *ngIf="client.Won"> You won! Omg! </div>
       <div class="lost" *ngIf="client.Lost"> You lost! Omg! </div>
-
       <div *ngIf="terminal.prompts.guess?.[0] as prompt">
         <h3> Guess the random number </h3>
         <button *ngFor="let guess of guesses" (click)="terminal.respond(guess,'guess')">
           {{guess}}
         </button>
       </div>
-
     </div>
-
-    <div *ngIf="terminal.input.service == 'Brownie Points'">
-      You Won!!!
-    </div>
-
   </app-table-service>
 
   <app-terminal [terminal]="terminal"></app-terminal>

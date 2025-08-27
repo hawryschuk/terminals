@@ -78,27 +78,61 @@ TerminalServer o-- WebTerminal
     }
 
     class ServiceCenter {
-        terminals
-        services
-        tables
-        join() Terminal
+        -terminals
+        -services
+        -tables
+        -registry : Service[]
+
+        +register(Service)
+        +join(Terminal)
+        -broadcast(Message)
+        -maintain()
+    }
+
+    class ServiceCenterClient {
+        *Connect( baseuri | terminal )
+        
+        +Name
+        +Service
+        Messages
+        Users
+        Tables
+        Started
+        Ended
+        Results
+        Won
+        Lost
+        Services
+        NameInUse
+
+        +Sit()
+        +Stand()
+        +Ready()
+        +Unready()
+        +JoinTable()        
+        +LeaveTable()
+        +CreateTable()
     }
 
     class Service {
-        USERS : number[] | number | *
-        NAME : string
-        seats:Seat[]
-
-        operate(once?)
-        broadcast(message)
-        message(seat,message)
-        prompt(seat,prompt)
+        *USERS : number[] | number | *
+        *NAME : string
+        +Winners
+        +Losers
+        -terminals
+        -broadcast(message)
     }
 
     class Table {
-        terminals
-        seats
-        service
+        sitting
+        standing
+        ready
+
+        +terminals
+        +full
+        +ready
+        +running
+        +finished
     }
 
     class Seat {
@@ -115,19 +149,18 @@ TerminalServer o-- WebTerminal
         respond(answer,question)
     }
 
-    class ServiceRegistration {
-        class:Service
-    }
-    
     GuessingGame --|> Service
 
     ServiceCenter o-- Terminal
     ServiceCenter o-- Table
-    ServiceCenter o-- ServiceRegistration
+    ServiceCenter o-- Service
 
     Table *-- Terminal
     Table o-- Seat
-    Table o-- Service
+
+    User -- ServiceCenterClient
+    ServiceCenterClient -- Terminal
+
 
     Seat -.- Terminal
 @enduml
@@ -158,6 +191,16 @@ note over User,Server
 end note
 
 == Entry Stage ==
+    Server -> Terminal: Message [Service List]
+    Server -> Terminal: Message [User List]
+    Server -> Terminal: Message [Table List]
+
+== <<Events>> ==
+loop
+    Server -> Terminal: User Activity  \n ( IE: Created/Joined/Left Tables, Sat/Stood/Ready/Unready )
+end
+
+== Registration ==
     loop Prompt For Username
         Server -> Terminal: Prompt [Name]
         note right of Server
@@ -175,7 +218,6 @@ end note
     end
 
 == Lobby Stage ==
-Server -> Terminal: Message [Service List]
 
 loop Chat Lounge
     Server -> Terminal: Prompt [Lounge Message]
@@ -264,17 +306,13 @@ end
 
 ### TODO : 
 - Restore functionality :
-    - Table Chat
     - Invite Robot
     - Boot Robot
-    - Stand
     - Switch Service
     - Exit
     - Error handling
         - user goes offline
         - error in service
-    - Remote Service Center
-    - CLI
 - User from @hawryschuk-crypto
     - sign activity
 - Migrate to @hawryschuk-crypto/Server

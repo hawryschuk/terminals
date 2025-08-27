@@ -23,6 +23,7 @@ export class TerminalComponent implements OnInit {
     const inputs = Array.from(document.querySelectorAll('.prompt input:not([disabled])')) as HTMLInputElement[];
     const active = inputs.find(input => input === document.activeElement);
     const handle = [active, active?.form].includes(event.target as any);
+    console.log('handling event', { event, name, value, active, handle })
     if (event instanceof PointerEvent || handle)
       Util.throttle({
         interval: 500,
@@ -33,6 +34,9 @@ export class TerminalComponent implements OnInit {
           return this.terminal.respond(value, name);
         }
       });
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    event.stopPropagation();
   }
 
   scrollTop$ = new BehaviorSubject<number>(0);
@@ -44,6 +48,7 @@ export class TerminalComponent implements OnInit {
         this.cd.detectChanges();
         this.scrollTop$.next(this.container.nativeElement.scrollHeight);
         if (document.querySelector('.prompt input')) {
+          await Util.pause(150); // prevents the form from updating immediately , having an input selected/activeElement , and having an event from another form affect this one
           const input = await Util.waitUntil(() => document.querySelector('.prompt input:not([disabled])')! as HTMLInputElement);
           input.focus();
           input.checked = true;

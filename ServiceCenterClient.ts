@@ -6,8 +6,22 @@ import { Terminal } from "./Terminal";
 import { WebTerminal } from "./WebTerminal";
 import { stat } from "fs";
 
-
+/** Service Center Client : Facilitates the operation of a Service Center : Connects via supplying either :
+ * A) BASEURI to a remote Service Center
+ * B) TERMINAL already connected to a Service Center ( local/remote application )
+*/
 export class ServiceCenterClient {
+
+    static async create({ terminal, httpClient, baseuri }: { terminal?: Terminal; httpClient?: MinimalHttpClient; baseuri?: string; } = {}) {
+        terminal ||= (baseuri || httpClient)
+            ? await WebTerminal.connect({ baseuri, httpClient })
+            : new Terminal;
+        if (terminal instanceof WebTerminal) {
+            await terminal.request({ method: 'get', url: 'service', body: { id: terminal.id } });
+        }
+        return new ServiceCenterClient(terminal!);
+    }
+
     constructor(public terminal: Terminal) { }
 
     get Users() {
@@ -136,11 +150,15 @@ export class ServiceCenterClient {
             get users() { return [...this.sitting, ...this.standing].filter(Boolean) as string[]; }
             constructor(table: TTable) { Object.assign(this, table); }
         }
-        return this.terminal.history.reduce((tables, item, i) => {
+        return this.terminal.history.reduce((tables, item, i, arr) => {
             if (i > index && item.message?.type === 'user-status') {
                 const { name, id, seats, seat, service } = item.message as Messaging.UserStatus;
                 let { status } = item.message as Messaging.UserStatus;
                 const table = tables.find(table => table.users.includes(name))!;
+                if (!table && /stood|table|sat|ready/.test(status) && !/created/.test(status)) {
+                    console.error('anomaly-no-table', item, arr.slice(0, i));
+                    debugger;
+                }
                 if (status == 'created-table')
                     tables.push(new Table({
                         id: id!,
@@ -153,9 +171,17 @@ export class ServiceCenterClient {
                 if ((status === 'stood-up' || status === 'offline' || status === 'left-table') && table.sitting.includes(name))
                     table.sitting[table.sitting.indexOf(name)] = undefined;
 
+                if (status === 'stood-up')
+                    table.standing.push(name);
+
                 if (status === 'offline' || status === 'left-table') {
-                    Util.removeElements(table.standing, name);
-                    Util.removeElements(table.ready, name);
+                    if (table) {
+                        Util.removeElements(table.standing, name);
+                        Util.removeElements(table.ready, name);
+                    } else if (status === 'left-table') {
+                        console.error('anomaly-no-table', item);
+                        debugger;
+                    }
                 }
 
                 if (status === 'joined-table')
@@ -208,21 +234,10 @@ export class ServiceCenterClient {
         return Util.waitUntil(() => this.ServiceEnded!);
     }
 
-    static async create({ terminal, httpClient, baseuri }: { terminal?: Terminal; httpClient?: MinimalHttpClient; baseuri?: string; } = {}) {
-        terminal ||= (baseuri || httpClient)
-            ? await WebTerminal.connect({ baseuri, httpClient })
-            : new Terminal;
-        if (terminal instanceof WebTerminal) {
-            await terminal.request({ method: 'get', url: 'service', body: { id: terminal.id } });
-        }
-        return new ServiceCenterClient(terminal!);
-    }
-
     get Menu() { return this.terminal.prompts.menu?.[0] }
 
-    async RefreshMenu() {
-        this.SelectMenu('Refresh');
-    }
+    /** Redundant -- As the main loop will continue to update  */
+    async RefreshMenu() { this.SelectMenu('Refresh'); }
 
     async SelectMenu(title: string) {
         const choice = await Util.waitUntil(() => {

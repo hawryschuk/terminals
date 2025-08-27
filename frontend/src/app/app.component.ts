@@ -21,10 +21,7 @@ export class AppComponent implements OnInit {
     this.terminal.subscribe({
       handler: () => {
         this.guesses = this.terminal.prompts.guess
-          ? (() => {
-            const { min, max } = this.terminal.prompts.guess[0];
-            return Util.range(min!, max!);
-          })()
+          ? Util.range(this.terminal.prompts.guess[0].min!, this.terminal.prompts.guess[0].max!)
           : undefined;
       }
     });
