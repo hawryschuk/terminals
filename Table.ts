@@ -11,6 +11,7 @@ export class Table<T extends BaseService> {
     id = Util.UUID;
     instance?: T;
     result?: Awaited<ReturnType<BaseService['start']>>;
+    error?: Error;
 
     constructor(public service: typeof BaseService, seats: number, creator: Terminal) {
         this.seats = new Array(seats).fill(0).map(() => new Seat);
@@ -29,9 +30,15 @@ export class Table<T extends BaseService> {
     async start() {
         await this.broadcast({ type: 'start-service' });
         this.instance = new (this.service as any)(this.seats);
-        const results = this.result = await this.instance!.start();
+        const { success, error } = (await this
+            .instance!
+            .start()
+            .then(success => ({ success }))
+            .catch(error => ({ error }))) as { error?: Error; success?: Messaging.ServiceResult["results"]; };
+        this.result = success;
+        this.error = error;
         delete this.instance;
-        await this.broadcast(<Messaging.ServiceResult>{ type: 'end-service', results });
+        await this.broadcast(<Messaging.ServiceResult>{ type: 'end-service', results: success, error });
         await Promise.all(this.seats.map(seat => seat.terminal?.prompt({ type: "number", name: 'ready', resolved: 0, clobber: true })));
     }
 }

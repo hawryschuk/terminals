@@ -34,7 +34,12 @@ export class Terminal extends Model {
     }
 
     get subscribers(): { handler: Function; event?: string; }[] { return (this as any)[Symbol.for('subscribers')] ||= []; }
-    subscribe(options: { handler: Function; event?: string; }) { this.subscribers.push(options); return this; }
+
+    subscribe(options: { handler: Function; event?: string; }) {
+        this.subscribers.push(options);
+        return () => Util.removeElements(this.subscribers, options);
+    }
+
     async notify(event: any = this.last) { await Promise.all(this.subscribers.map(s => s.handler(event))); }
 
     /** Get the answers to the questions prompted 
@@ -124,7 +129,7 @@ export class Terminal extends Model {
             .join('\n');
     }
 
-    async send(message: any) {
+    async send<T = any>(message: T) {
         if (this.finished) throw new Error('webterminal is finished');
         this.history.push({ type: 'stdout', message, time: Date.now() });
         // await this.save();
@@ -133,13 +138,18 @@ export class Terminal extends Model {
 
     /** Provide answers to multiple prompts which can carry into the future */
     async answer(answers: any) {
-        for (const [key, val] of Object.entries(answers)) {
-            await Util.waitUntil(async () => {
-                if (this.finished) throw new Error('finished');
-                return this.prompts[key];
-            }, { pause: 2 });
-            await this.respond(val, key);
-        }
+        answers = Util.deepClone(answers);
+        await Util.waitUntil(async () => {
+            if (this.finished) throw new Error('finished');
+            for (const [key, val] of Object.entries(answers))
+                if (this.prompts[key]) {
+                    await this.respond(val instanceof Array ? val.shift() : val, key);
+                    if (!(val instanceof Array) || val.length === 0) {
+                        delete answers[key];
+                    }
+                }
+            return Object.entries(answers).length === 0;
+        }, { pause: 2 });
     }
 
     async prompt(options: Prompt, waitResult = true): Promise<any> {

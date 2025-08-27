@@ -1,128 +1,114 @@
-<div class="wrapper" *ngIf="(vars$|async) as vars">
+<div class="container" #container [scrollTop]="scrollTop$|async">
+    <h2> Service Center</h2>
 
-    <!-- State 0 : Connecting... -> Connected -->
-    <div *ngIf="!vars.terminal">Connecting...</div>
+    <div id="status" [attr.data-status]="status">
+        <h3> Status </h3>
+        <span> {{status}} </span>
+    </div>
 
-    <!-- State 1 : What is your name-->
-    <form *ngIf="vars.terminal?.prompts.name as prompt" id="enter_name"
-        (ngSubmit)="setName(input.value || prompt[0].initial)">
-        <h2> Welcome to the service-center front-desk table-service. To help guide you to a service-table, we'll need to
-            record your (unique) name.</h2>
-        <label>{{ prompt[0].message || prompt[0].name }}</label>
-        <input [disabled]="api.loading" #input [placeholder]="prompt[0].initial || ''" type="text"
-            [value]="vars.terminal.input.name || ''">
-        <button type="submit"> send </button>
-    </form>
+    <!-- 1 : Connect -->
+    <button id="disconnected" *ngIf="!connected && !connecting" (click)="connect()"> Connect </button>
 
-    <!-- State 2 : What service -->
-    <form *ngIf="vars.terminal?.prompts.service" id="select_service">
-        <h2> Which service would you like to run, {{ vars.terminal.input.name }}? </h2>
-        <button [attr.data-value]="choice.value" [disabled]="api.loading" (click)="setService(choice.value)"
-            *ngFor="let choice of vars.terminal.prompted.choices">
-            {{choice.title}}
-        </button>
-    </form>
+    <div *ngIf="connected" id="connected">
 
-    <!-- Service Rendering ( Rather than a terminal )-->
-    <div id="service"></div>
-    <!-- <app-spades [tableService]="true" *ngIf="vars.game && vars.terminal.input.service==='spades'" [game]="vars.game">
-    </app-spades>
+        <!-- 2 : Provide Name -->
+        <form id="enter-name" *ngIf="terminal.prompts.name" (ngSubmit)="terminal.respond(name.value,'name')">
+            <input #name placeholder="Name">
+        </form>
 
-    <app-stock-ticker *ngIf="vars.game && vars.terminal.input.service==='stock ticker'" [terminal]="vars.terminal"
-        [game]="vars.game">
-    </app-stock-ticker>
-
-    <app-telefunken *ngIf="vars.game && vars.terminal?.input.service==='telefunken'" [game]="vars.game">
-    </app-telefunken> -->
-
-    <div *ngIf="vars.terminal?.input.service" id="lounge">
-
-        <fieldset id="lounge-members">
-            <legend>{{ vars.terminal.input.service }} <button (click)="leaveService()"> leave </button></legend>
-            <div *ngFor="let agent of vars.tableService.lounge" class="member">
-                <span class="name"> {{ agent.name }} </span>
-                <span class="table"> {{ agent.table }} </span>
-                <span class="rating"></span>
-            </div>
-        </fieldset>
-
-        <!-- State 3 : UPPER-HALF : TABLES : LOUNGE : Observe? Sit where? Ready? Chat-Table? -->
-        <div id="service-tables">
-            <p *ngIf="!vars.tables?.length">Loading Tables...</p>
-            <ng-container *ngIf="vars.tables as _tables">
-                <fieldset *ngFor="let table of _tables; let tableNumber = index " class="table">
-                    <legend>
-                        Table #{{1+tableNumber}}
-                        <button (click)="onJoinTableClick(tableNumber+1)" [disabled]="api.loading" *ngIf="!vars.table">
-                            observe {{ vars.table }}
-                        </button>
-
-                        <button [disabled]="api.loading" (click)="onLeaveTableClick()"
-                            *ngIf="vars.table==(tableNumber+1)">
-                            leave table
-                        </button>
-
-                        <button [disabled]="api.loading" (click)="onReadyClick()"
-                            *ngIf="vars.table==(tableNumber+1) && vars.seat && vars.canReady">
-                            ready
-                        </button>
-                    </legend>
-
-                    <fieldset *ngFor="let seat of vars.seatNumbers" class="seat">
-
-                        <legend> Seat #{{seat}} </legend>
-
-                        <span *ngIf="memberAtSeat(table,seat) as member">
-                            {{member.name}} <span *ngIf="!member.ready">(not-ready)</span>
-                            <button [disabled]="api.loading" *ngIf="vars.seat==seat && vars.table==(tableNumber+1)"
-                                (click)="stand()">
-                                stand
-                            </button>
-                            <!-- <span *ngIf="member.ready"> ready </span>
-                            <span *ngIf="!member.ready"> &lt;not-ready&gt; </span> -->
-                        </span>
-
-                        <span *ngIf="!memberAtSeat(table,seat)">
-                            &lt; empty &gt;
-                        </span>
-
-                        <button [disabled]="api.loading"
-                            *ngIf="!vars.seat && !memberAtSeat(table,seat) && (!vars.table || vars.table==(tableNumber+1))"
-                            (click)="joinTable(tableNumber+1,seat)">
-                            sit
-                        </button>
-
-                        <button *ngIf="!memberAtSeat(table,seat) && vars.table==(tableNumber+1) && vars.seat"
-                            [disabled]="api.loading" (click)="inviteRobot(seat)">
-                            invite-robot
-                        </button>
-
-                        <button *ngIf="memberAtSeat(table,seat)?.robot && vars.table==(tableNumber+1)"
-                            [disabled]="api.loading" (click)="bootRobot(seat)">
-                            boot-robot
-                        </button>
-
-                    </fieldset>
-
-
-                </fieldset>
-            </ng-container>
-        </div>
-
-        <!-- STATE 3 : BOTTOM-HALF : CHAT : HISTORY(TOP) + SEND-NEW-MESSAGE(BOTTOM) -->
-        <div id="chat-wrapper">
-            <div id="chat-history" #scrollMe [scrollTop]="scrollTop$">
-                <div *ngFor="let item of vars.loungeChat">
-                    <span class="from">{{ item.name }} </span> : <span class="message">{{ item.message }}</span>
-                </div>
-            </div>
-            <form id="chat-form">
-                <textarea #loungeMessage></textarea>
-                <button [disabled]="api.loading"
-                    (click)=" chatLounge(loungeMessage.value) && (loungeMessage.value='') ">send</button>
+        <div id="everyone">
+            <h3> Everyone </h3>
+            <ol>
+                <li *ngFor="let user of Client.Users!.Online"> {{ user.name }} </li>
+            </ol>
+            <form *ngIf="menu?.includes('Message Everyone')"
+                (ngSubmit)="publicMessage.value && client.Message.Everyone(publicMessage.value); publicMessage.value = ''; ">
+                <ul>
+                    <li *ngFor="let message of Client.Messages!.Everyone">
+                        {{ message.time }} : {{ message.from }} : {{ message.message }}
+                    </li>
+                </ul>
+                <input #publicMessage placeholder="public chat" />
             </form>
         </div>
 
-    </div>
+        <!-- 3 : Select Service -->
+        <form id="select-service" *ngIf="terminal.prompts.service?.[0] as prompt">
+            <h3> Select Service </h3>
+            <button *ngFor="let choice of prompt.choices" (click)="terminal.respond(choice.value, 'service')">
+                {{choice.title}}
+            </button>
+        </form>
 
+        <div id="create-table">
+            <button *ngIf="menu?.includes('Create Table')" (click)="client.CreateTable()"> Create Table </button>
+
+            <div *ngIf="terminal.prompts.seats?.[0] as seats">
+                <button *ngFor="let seat of seats.choices" (click)="terminal.respond(seat.value,'seats')">
+                    {{seat.value}}
+                </button>
+            </div>
+        </div>
+
+        <div id="Lounge">
+            <h4> Lounge </h4>
+            <table>
+                <tr *ngFor="let user of Client.Users!.Service">
+                    <td>{{user.name}}</td>
+                    <td>{{user.table}}</td>
+                </tr>
+            </table>
+
+            <form id="lounge-chat" *ngIf="menu?.includes('Message Lounge')"
+                (ngSubmit)="loungeMessage.value && client.Message.Lounge(loungeMessage.value); loungeMessage.value = ''; ">
+                <ul>
+                    <li *ngFor="let message of Client.Messages!.Lounge">
+                        {{ message.time }} : {{ message.from }} : {{ message.message }}
+                    </li>
+                </ul>
+                <input #loungeMessage placeholder="lounge chat" />
+            </form>
+
+        </div>
+
+        <div id="table" *ngIf="terminal.input.table">
+
+            <h4> Table </h4>
+            <form id="table-chat" *ngIf="menu?.includes('Message Table')"
+                (ngSubmit)="tableMessage.value && client.Message.Table(tableMessage.value); tableMessage.value = ''; ">
+                <ul>
+                    <li *ngFor="let message of Client.Messages!.Table">
+                        {{ message.time }} : {{ message.from }} : {{ message.message }}
+                    </li>
+                </ul>
+                <input #tableMessage placeholder="table chat" />
+            </form>
+
+            <button *ngIf="menu?.includes('Sit')" (click)="client.Sit()"> Sit </button>
+
+            <button *ngIf="menu?.includes('Stand')" (click)="client.Stand()"> Stand </button>
+
+            <button *ngIf="menu?.includes('Ready')" (click)="client.Ready()"> Ready </button>
+
+            <h5> Observers </h5>
+            <ol id="standing">
+                <li *ngFor="let name of client.Table!.standing"> {{ name }} </li>
+            </ol>
+
+            <h5> Seats </h5>
+            <ol id="seats">
+                <li *ngFor="let name of client.Table!.sitting" [attr.data-ready]="client.Table!.ready.includes(name!)"
+                    [attr.data-empty]="!name">
+                    {{ name || 'empty' }}
+                </li>
+
+            </ol>
+        </div>
+
+        <div *ngIf="terminal.input.service && terminal.input.table" class="service-view">
+
+            <ng-content></ng-content>
+            
+        </div>
+    </div>
 </div>

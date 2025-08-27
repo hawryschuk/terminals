@@ -1,10 +1,36 @@
 
 export namespace Messaging {
+    export type UserStatus = {
+        type: 'user-status';
+        name: string;
+        status: 'online' | 'offline' | 'joined-table' | 'left-table' | 'joined-service' | 'left-service' | 'sat-down' | 'stood-up' | 'created-table' | 'ready' | 'unready';
+        id?: string;
+
+        seats?: number;
+        seat?: number;
+        service?: string;
+    };
+    export type Users = {
+        type: 'users';
+        users: Array<{
+            name: string;
+            service?: string;
+            table?: string;
+            seat?:number;
+        }>;
+    };
+    export type Services = {
+        type: 'services',
+        services: Array<{ id: string; name: string; }>;
+    };
     export type Tables = {
         type: 'tables';
         tables: Array<{
             id: string;
-            empty: number;
+            service: string;
+            sitting: Array<string | undefined>;
+            standing: string[];
+            ready: string[];
         }>;
     };
     export type TableActivity = {
@@ -21,6 +47,7 @@ export namespace Messaging {
     };
     export type ServiceResult = {
         type: 'end-service';
-        results: { winners: string[]; losers: string[]; };
+        results?: { winners: string[]; losers: string[]; };
+        error?: Error;
     };
 }

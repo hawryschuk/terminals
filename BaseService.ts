@@ -12,6 +12,5 @@ export abstract class BaseService {
 
     abstract start(): Promise<Messaging.ServiceResult['results']>;
 
-    async broadcast(message: any) { return await Promise.all(this.seats.map(t => t.terminal!.send(message))); }
-
+    async broadcast(message: any) { return await Promise.all(this.terminals.map(terminal => terminal.send(message))); }
 }

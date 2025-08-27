@@ -18,3 +18,5 @@ export * from './User';
 // export * from './TerminalRestApiServer';     // exe/cli express
 
 export * from './TestingServices';
+
+export * from './Messaging';

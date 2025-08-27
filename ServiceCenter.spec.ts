@@ -73,13 +73,13 @@ for (const type of ['local', 'remote'])
         });
 
         it('Lets the user list tables', async () => {
-            expect(client.Tables).to.not.be.ok;
-            await client.ListTables();
             expect(client.Tables!.length).to.equal(0);
         });
 
         it('Lets the user create a table', async () => {
-            expect(await client.CreateTable(1)).to.be.ok;
+            const { table, requiresSeats } = await client.CreateTable(1);
+            expect(table).to.be.ok;
+            expect(requiresSeats).to.equal(false);
         });
 
         it('Lets the user leave a table', async () => {
@@ -150,7 +150,7 @@ for (const type of ['local', 'remote'])
         it('allows users to send messages to the service lounge', async () => {
             await client2.SelectMenu('Message Lounge');
             await client2.terminal.answer({ message: 'hello' });
-            await Util.waitUntil(() => [client2, client3].every(client => Util.findWhere(client.LoungeMessages, { message: 'hello' })));
+            await Util.waitUntil(() => [client2, client3].every(client => Util.findWhere(client.Messages.Lounge, { message: 'hello' })));
         });
 
         it('expects no errors ', () => {

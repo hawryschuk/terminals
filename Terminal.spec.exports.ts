@@ -46,6 +46,14 @@ export const testTerminal = (terminal: Terminal) =>
             expect(terminal.prompted!.name).to.equal('waist-size');
             expect(terminal.input.height).to.equal('200');
         });
+        it('can answer multiple questions', async () => {
+            terminal.prompt({ name: 'q1', type: 'text' });
+            terminal.prompt({ name: 'q2', type: 'text' });
+            terminal.prompt({ name: 'q3', type: 'text' });
+            terminal.prompt({ name: 'q1', type: 'text' });
+            await terminal.answer({ q1: ['a', 'b'], q2: 'c', q3: 'd' });
+            expect(Util.pick(terminal.inputs, ['q1', 'q2', 'q3'])).to.deep.equal({ q1: ['a', 'b'], q2: ['c'], q3: ['d'] });
+        })
         it('finishes a terminal', async () => {
             await terminal.finish();
             expect(terminal.finished).to.be.ok;
