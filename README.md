@@ -9,6 +9,8 @@ This package provides abstract classes for terminals to be used in a software ap
 
 An example is as follows: A Service called "Guessing Game" generates a random number between 1 and 10. It then prompts the players to guess a number between 1 and 10. It determines which player is closest, and announces the winner.
 
+### Sample
+<a href="sample">View a sample of the Terminal and Service Center in a GUI/Web-App</a>
 
 ```plantuml
 @startuml
