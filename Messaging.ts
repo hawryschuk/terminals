@@ -7,9 +7,16 @@ export namespace Messaging {
             empty: number;
         }>;
     };
-    export type LoungeMessage = {
-        type: 'loungeMessage';
+    export type TableActivity = {
+        type: 'table-activity';
+        action: 'joined' | 'left' | 'sat' | 'ready' | 'unready';
+        who: string;
+    };
+    export type Message = {
+        type: 'message';
         from: string;
+        to: 'everyone' | 'lounge' | 'direct' | 'table';
+        id: string;
         message: string;
     };
     export type ServiceResult = {

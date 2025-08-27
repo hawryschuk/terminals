@@ -27,6 +27,7 @@ for (const type of ['local', 'remote'])
             terminal = client.terminal;
             terminal2 = client2.terminal;
             terminal3 = client3.terminal;
+            Object.assign(globalThis, { client, Util });
         });
 
         after(() => {
@@ -63,17 +64,6 @@ for (const type of ['local', 'remote'])
             await Util.waitUntil(() => client2.NameInUse);
         });
 
-        it('allows users to send messages to the lobby', async () => {
-            expect(terminal.prompts.loungeMessage).to.be.ok;
-            await terminal.answer({ loungeMessage: 'hello' });
-            await Util.waitUntil(() => [client, client2].every(
-                client => Util.findWhere(
-                    client.LoungeMessages,
-                    { from: `alex ${type}`, message: 'hello' }
-                )
-            ));
-        });
-
         it('Provides a list of services', async () => {
             await Util.waitUntil(() => client.Services);
         });
@@ -105,7 +95,6 @@ for (const type of ['local', 'remote'])
         });
 
         it('Lets the user signal they are ready', async () => {
-            Object.assign(globalThis, { client });
             await client.Ready();
         });
 
@@ -158,4 +147,13 @@ for (const type of ['local', 'remote'])
             await Util.waitUntil(() => !client.terminal.input.ready);
         });
 
+        it('allows users to send messages to the service lounge', async () => {
+            await client2.SelectMenu('Message Lounge');
+            await client2.terminal.answer({ message: 'hello' });
+            await Util.waitUntil(() => [client2, client3].every(client => Util.findWhere(client.LoungeMessages, { message: 'hello' })));
+        });
+
+        it('expects no errors ', () => {
+            expect([client, client2, client3].every(c => !c.terminal.history.some(i => i.message?.type === 'error')));
+        })
     });

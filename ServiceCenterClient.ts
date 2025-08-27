@@ -9,9 +9,11 @@ import { WebTerminal } from "./WebTerminal";
 export class ServiceCenterClient {
     constructor(public terminal: Terminal) { }
 
-    get LoungeMessages(): Array<Messaging.LoungeMessage> {
-        return this.terminal.history.filter(m => m.message?.type === 'loungeMessage').map(m => m.message) as any;
-    }
+    get Messages(): Array<Messaging.Message> { return this.terminal.history.filter(m => m.type === 'stdout' && m.message?.type === 'message').map(m => m.message); }
+    get LoungeMessages(): Array<Messaging.Message> { return Util.where(this.Messages, { to: 'lounge', id: this.terminal.input.service }); }
+    get TableMessages(): Array<Messaging.Message> { return Util.where(this.Messages, { to: 'table', id: this.terminal.input.table }); }
+    get DirectMessages(): Array<Messaging.Message> { return Util.where(this.Messages, { to: 'direct' }); }
+    get PublicMessages(): Array<Messaging.Message> { return Util.where(this.Messages, { to: 'everyone' }); }
 
     get Tables(): Messaging.Tables['tables'] | undefined {
         return this.terminal.history.filter(m => m.message?.type === 'tables').pop()?.message.tables as any;

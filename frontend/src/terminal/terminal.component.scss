@@ -1,14 +1,19 @@
-$topheight: 60px;
-$promptheight: 200px;
-$fontsize: 12pt;
+:host {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 20px);
+    width: calc(100vw - 20px);
+}
 
 section.middle {
-    
+    flex: 1;
     height: 100%;
     overflow: auto;
-    display: block;
-    white-space: pre;
-    &,input {
+    display: flex;
+    flex-direction: column;
+
+    &,
+    input {
         font-family: 'consolas', 'Courier New', Courier, monospace;
         font-size: 12pt;
         background-color: black;
@@ -18,18 +23,49 @@ section.middle {
     }
 
     #stdout {
-        height: calc(100vh - #{$topheight} - #{$topheight} - #{$promptheight});
-        &.empty { height: 0; display: block; }        
+        white-space: pre-wrap;
+        word-wrap: break-word;
     }
 
-    .prompt {        
-        height: $promptheight;
-        .message { float: left; font-weight: bold; margin-right: 10px; }
-        fieldset{border:0;padding:0}
-        fieldset[data-disabled=true]{ color: grey; }
-        input[type=radio]{ opacity: 0%; }
-        input[type=radio]:checked + label:before    { content: ">"; }
-        input[type=number]                          { -moz-appearance:textfield; width: 200px; }
-        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button  { -webkit-appearance: none; }
+    #prompts {
+        margin-top: auto;
+
+        .prompt {
+
+            .message {
+                float: left;
+                font-weight: bold;
+                margin-right: 10px;
+            }
+
+            fieldset {
+                border: 0;
+                padding: 0
+            }
+
+            fieldset[data-disabled=true] {
+                color: grey;
+            }
+
+            input[type=radio] {
+                opacity: 0%;
+            }
+
+            input[type=radio]:checked+label:before {
+                content: ">";
+            }
+
+            input[type=number] {
+                -moz-appearance: textfield;
+                width: 200px;
+            }
+
+            input::-webkit-outer-spin-button,
+            input::-webkit-inner-spin-button {
+                -webkit-appearance: none;
+            }
+        }
     }
+
+
 }

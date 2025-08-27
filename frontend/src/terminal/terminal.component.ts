@@ -13,29 +13,26 @@ import { FormsModule } from '@angular/forms';
   imports: [CommonModule, FormsModule]
 })
 export class TerminalComponent implements OnInit {
-  @ViewChild('scrollMe') private myScrollContainer!: ElementRef;
+  @ViewChild('container') private container!: ElementRef;
   @Input() terminal!: Terminal;
   Number = Number;
 
   constructor(public cd: ChangeDetectorRef) { }
 
-  async respond(event: Event, name: string, value: any) {
+  respond(event: Event, name: string, value: any) {
     const inputs = Array.from(document.querySelectorAll('.prompt input:not([disabled])')) as HTMLInputElement[];
     const active = inputs.find(input => input === document.activeElement);
     const handle = [active, active?.form].includes(event.target as any);
-    if (event instanceof PointerEvent || handle) {
-      console.log('Respond to Form: ', { value, name, event, active, handle });
-      await this.terminal.respond(value, name);
-    } else if (!active) {
-      console.log('ignore 1', { event, name, value, active });
-      debugger;
-    } else {
-      console.log('ignore', { event, name, value, active });
-      debugger;
-    }
-    // event.stopPropagation();
-    // event.preventDefault();
-    // return false;
+    if (event instanceof PointerEvent || handle)
+      Util.throttle({
+        interval: 500,
+        queue: 1,
+        resource: 'terminal-respond',
+        block: () => {
+          console.log('sending response', name, value);
+          return this.terminal.respond(value, name);
+        }
+      });
   }
 
   scrollTop$ = new BehaviorSubject<number>(0);
@@ -43,10 +40,9 @@ export class TerminalComponent implements OnInit {
   ngOnInit(): void {
     this.terminal.subscribe({
       handler: async () => {
-        await Util.pause(100);
         this.cd.markForCheck();
         this.cd.detectChanges();
-        this.scrollTop$.next(this.myScrollContainer.nativeElement.scrollHeight);
+        this.scrollTop$.next(this.container.nativeElement.scrollHeight);
         if (document.querySelector('.prompt input')) {
           const input = await Util.waitUntil(() => document.querySelector('.prompt input:not([disabled])')! as HTMLInputElement);
           input.focus();

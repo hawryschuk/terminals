@@ -48,29 +48,39 @@ export class ServiceCenter {
 
     get Names() { return this.terminals.map(t => t.input.Name).filter(Boolean); }
 
-    async broadcast(message: any) { return await Promise.all(this.terminals.map(t => t.send(message))); }
-
-    mute = false;
-    muteLounge() { this.mute = true; return this; }
+    async broadcast(message: any) {
+        const messaging = message?.type === 'message';
+        const { to, id, from } = messaging ? message : {} as any;
+        return await Promise.all(this
+            .terminals
+            .filter(terminal => {
+                const { input } = terminal;
+                return !messaging
+                    || from === input.Name
+                    || to === 'everyone'
+                    || (to === 'direct' && input.Name === id)
+                    || (to == 'lounge' && input.service === id)
+                    || (to == 'table' && input.table === id)
+            })
+            .map(t => t.send(message))
+        );
+    }
 
     private async maintain() {
         while (!this.finished) {
             for (const terminal of this.terminals) {
 
                 /** Step 1 : Provide Name */
-                if (!terminal.inputs.Name && !terminal.prompts.name) {
+                if (!terminal.inputs.Name && !terminal.prompts.name && !terminal.prompts.Name) {
                     const { result } = await terminal.prompt({ type: 'text', name: 'name' }, false);
                     (async () => {
                         const name = await result;
-                        Mutex.getInstance('ServiceCenter::Maintain::name').use({
-                            block: async () => {
-                                if (this.Names.includes(name)) {
-                                    await terminal.send({ type: 'name-in-use', name });
-                                } else {
-                                    await terminal.prompt({ type: 'text', name: 'Name', resolved: name });
-                                }
-                            }
-                        });
+                        if (this.Names.includes(name)) {
+                            await terminal.send({ type: 'name-in-use', name });
+                            await terminal.prompt({ type: 'text', name: 'name', resolved: '' });
+                        } else {
+                            await terminal.prompt({ type: 'text', name: 'Name', resolved: name });
+                        }
                     })();
                 }
 
@@ -86,17 +96,6 @@ export class ServiceCenter {
                 }
 
                 if (terminal.input.Name) {
-                    /** Allow Lounge Messages */
-                    if (!terminal.prompts.loungeMessage && !this.mute) {
-                        const { result } = await terminal.prompt({ type: 'text', name: 'loungeMessage', clobber: true }, false);
-                        (async () => {
-                            const message = await result;
-                            if (message) {
-                                const loungeMessage: Messaging.LoungeMessage = { type: 'loungeMessage', from: terminal.input.Name, message };
-                                this.broadcast(loungeMessage);
-                            }
-                        })();
-                    }
 
                     /** Menu */
                     if (terminal.input.service) {
@@ -118,11 +117,6 @@ export class ServiceCenter {
                             };
                             const choices: Prompt['choices'] = [
                                 {
-                                    title: 'List Tables',
-                                    disabled: !!table,
-                                    value: ListTables
-                                },
-                                {
                                     title: 'Create Table',
                                     disabled: !!table,
                                     value: async () => {
@@ -141,6 +135,11 @@ export class ServiceCenter {
                                     }
                                 },
                                 {
+                                    title: 'List Tables',
+                                    disabled: !!table,
+                                    value: ListTables
+                                },
+                                {
                                     title: 'Join Table',
                                     disabled: !!table || !tables.length || !!terminal.prompts.table,
                                     value: async () => {
@@ -153,7 +152,8 @@ export class ServiceCenter {
                                             }))
                                         });
                                         const table = Util.findWhere(tables, { id })!;
-                                        table.terminals.push(terminal);
+                                        if (table) table.terminals.push(terminal);
+                                        else await terminal.prompt({ type: 'text', resolved: '', name: 'table' });
                                     }
                                 },
                                 {
@@ -162,9 +162,13 @@ export class ServiceCenter {
                                     value: async () => {
                                         const seat = table!.seats.find(s => !s.terminal)!;
                                         const index = table!.seats.indexOf(seat);
-                                        seat.terminal = terminal;
-                                        await terminal.prompt({ type: "number", name: 'seat', resolved: index + 1 });
-                                        table!.seats[index].terminal = terminal;
+                                        if (seat) {
+                                            seat.terminal = terminal;
+                                            await terminal.prompt({ type: "number", name: 'seat', resolved: index + 1, clobber: true });
+                                            table!.seats[index].terminal = terminal;
+                                        } else {
+                                            await terminal.send({ type: 'error', message: 'table-full' });
+                                        }
                                     }
                                 },
                                 {
@@ -193,6 +197,63 @@ export class ServiceCenter {
                                         Util.removeElements(table!.terminals, terminal);
                                         await terminal.prompt({ type: 'text', name: 'table', resolved: '' });
                                     }
+                                },
+                                {
+                                    title: 'Message Everyone',
+                                    disabled: !terminal.input.Name || !!terminal.prompts.message,
+                                    value: async () => {
+                                        const { result } = await terminal.prompt({ type: 'text', name: 'message', clobber: true }, false);
+                                        (async () => {
+                                            if (await result) {
+                                                const message: Messaging.Message = {
+                                                    type: 'message',
+                                                    to: 'everyone',
+                                                    from: terminal.input.Name,
+                                                    message: await result,
+                                                    id: '*',
+                                                };
+                                                this.broadcast(message);
+                                            }
+                                        })();
+                                    },
+                                },
+                                {
+                                    title: 'Message Lounge',
+                                    disabled: !terminal.input.Name || !!terminal.prompts.message || !terminal.input.service,
+                                    value: async () => {
+                                        const { result } = await terminal.prompt({ type: 'text', name: 'message', clobber: true }, false);
+                                        (async () => {
+                                            if (await result) {
+                                                const message: Messaging.Message = {
+                                                    type: 'message',
+                                                    to: 'lounge',
+                                                    from: terminal.input.Name,
+                                                    message: await result,
+                                                    id: terminal.input.service,
+                                                };
+                                                this.broadcast(message);
+                                            }
+                                        })();
+                                    },
+                                },
+                                {
+                                    title: 'Message Table',
+                                    disabled: !terminal.input.Name || !!terminal.prompts.message || !terminal.input.service || !terminal.input.table,
+                                    value: async () => {
+                                        const { result } = await terminal.prompt({ type: 'text', name: 'message', clobber: true }, false);
+                                        (async () => {
+                                            if (await result) {
+                                                const message: Messaging.Message = {
+                                                    type: 'message',
+                                                    to: 'table',
+                                                    from: terminal.input.Name,
+                                                    message: await result,
+                                                    id: terminal.input.table,
+                                                };
+                                                this.broadcast(message);
+                                            }
+                                        })();
+                                    },
                                 },
                                 {
                                     title: 'Refresh',

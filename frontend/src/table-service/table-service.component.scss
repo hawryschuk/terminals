@@ -1,0 +1,62 @@
+.wrapper {
+    height: 100%;
+    overflow: auto;
+    
+    &>div, &>app-spades, &>form {
+        display: block;
+        border: 1px solid green;
+        float: left;
+    }
+    
+}
+
+#lounge {
+    display: block;
+    height: calc(100% - 3px);
+    width: calc(100% - 3px);
+    border: 1px solid green;
+    float: left;
+    * { font-size: 0.6rem }
+        
+    /** Upper 50% */
+    #lounge-members {
+        width: 120px;
+        height: calc(50% - 15px);
+        overflow: auto;
+        float: left;
+    }
+
+    #service-tables {
+        float: left;
+        width: calc(100% - 155px);
+        height: 50%;
+        overflow: auto;
+        border: 1px solid red;
+
+        /** table-number seat-number */
+        fieldset fieldset { 
+            float: left;
+            button { clear: both; display: block;}
+        }
+    }
+    
+    /** Lower 50% */        
+    #chat-wrapper {
+        clear: both;
+        margin-top:10px;
+        width: 100%;
+        height: calc(50% - 15px);
+        border: 1px solid blue;
+
+        #chat-history {
+            height: calc(100% - 50px);
+            overflow: auto;
+        }
+
+        #chat-form {
+            height: 50px;
+            textarea { height:100%; float: left; width: calc(100% - 50px - 15px); }
+            button { height: 100%; float: right; width: 50px; clear:right; }
+        }
+    }
+}

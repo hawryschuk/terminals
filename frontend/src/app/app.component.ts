@@ -16,7 +16,6 @@ export class AppComponent implements OnInit {
   ngOnInit() {
     new ServiceCenter()
       .register(TestingServices.BrowniePoints, TestingServices.GuessingGame)
-      .muteLounge()
       .join(this.terminal);
     Object.assign(window, this);
   }
