@@ -1,53 +1,77 @@
 
 export namespace Messaging {
-    export type UserStatus = {
-        type: 'user-status';
-        name: string;
-        status: 'online' | 'offline' | 'joined-table' | 'left-table' | 'joined-service' | 'left-service' | 'sat-down' | 'stood-up' | 'created-table' | 'ready' | 'unready';
-        id?: string;
 
-        seats?: number;
-        seat?: number;
-        service?: string;
-    };
-    export type Users = {
-        type: 'users';
-        users: Array<{
+    export namespace User {
+        export type Status = {
+            type: 'user-status';
             name: string;
+            status: 'online' | 'offline' | 'joined-table' | 'left-table' | 'joined-service' | 'left-service' | 'sat-down' | 'stood-up' | 'created-table' | 'ready' | 'unready';
+            id?: string;
+
+            seats?: number;
+            seat?: number;
             service?: string;
-            table?: string;
-            seat?:number;
-        }>;
-    };
-    export type Services = {
-        type: 'services',
-        services: Array<{ id: string; name: string; }>;
-    };
-    export type Tables = {
-        type: 'tables';
-        tables: Array<{
-            id: string;
-            service: string;
-            sitting: Array<string | undefined>;
-            standing: string[];
-            ready: string[];
-        }>;
-    };
-    export type TableActivity = {
-        type: 'table-activity';
-        action: 'joined' | 'left' | 'sat' | 'ready' | 'unready';
-        who: string;
-    };
-    export type Message = {
+        };
+
+        export type List = {
+            type: 'users';
+            users: Array<{
+                name: string;
+                service?: string;
+                table?: string;
+                seat?: number;
+                ready?: boolean;
+            }>;
+        };
+    }
+
+    export namespace Table {
+        export type List = {
+            type: 'tables';
+            tables: Array<{
+                id: string;
+                service: string;
+                seats: Array<string | undefined>;
+                standing: string[];
+                ready: string[];
+            }>;
+        };
+    }
+
+    export type Chat = {
         type: 'message';
         from: string;
         to: 'everyone' | 'lounge' | 'direct' | 'table';
         id: string;
         message: string;
     };
-    export type ServiceResult = {
-        type: 'end-service';
-        results?: { winners: string[]; losers: string[]; };
-        error?: Error;
-    };
+
+    export namespace Service {
+        export type List = {
+            type: 'services',
+            services: Array<{ id: string; name: string; }>;
+        };
+
+        export type Start = {
+            type: 'start-service';
+            service: string;
+            id: string;
+            table: string;
+        }
+
+        export type End = {
+            type: 'end-service';
+            service: string;
+            id: string;
+            table: string;
+            results?: { winners: string[]; losers: string[]; error?: Error; };
+        };
+
+        export type Message = {
+            type: 'service-message';
+            service: string;
+            id: string;
+            message: any;
+        }
+    }
 }

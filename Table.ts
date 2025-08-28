@@ -1,44 +1,41 @@
 import { Util } from "@hawryschuk-common/util";
 import { Messaging } from "./Messaging";
-import { Seat } from "./Seat";
 import { BaseService } from "./BaseService";
 import { Terminal } from "./Terminal";
 
 
 export class Table<T extends BaseService> {
-    seats!: Seat[];
+    service!: typeof BaseService;
+    id!: string;
     terminals!: Terminal[];
-    id = Util.UUID;
+    seats!: number;
+
     instance?: T;
     result?: Awaited<ReturnType<BaseService['start']>>;
-    error?: Error;
 
-    constructor(public service: typeof BaseService, seats: number, creator: Terminal) {
-        this.seats = new Array(seats).fill(0).map(() => new Seat);
-        this.terminals = [creator];
+    constructor(options: { service: typeof BaseService; seats: number; creator: Terminal; id?: string; }) {
+        const { creator, id = Util.UUID } = options;
+        Object.assign(this, { ...options, id, terminals: [creator] });
     }
 
+    get sitting() { return this.terminals.filter(terminal => terminal.input.seat) }
+    get standing() { return this.terminals.filter(terminal => !terminal.input.seat) }
+    get empty() { return this.seats - this.sitting.length }
+    get full() { return this.empty === 0 }
+    get ready() { return this.full && this.sitting.every(s => s.input.ready) }
+    get running() { return !!this.instance && !this.finished; }
     get finished() { return !!this.result; }
-    get started() { return !!this.instance; }
-    get running() { return this.started && !this.finished; }
-    get empty() { return this.seats.filter(s => !s.terminal).length; }
-    get full() { return !this.empty; }
-    get ready() { return this.seats.every(s => s.terminal?.input.ready) && !this.running; }
 
-    async broadcast(message: any) { return await Promise.all(this.terminals.map(t => t.send(message))); }
-
-    async start() {
-        await this.broadcast({ type: 'start-service' });
-        this.instance = new (this.service as any)(this.seats);
-        const { success, error } = (await this
+    async start(id = Util.UUID) {
+        this.instance = new (this.service as any)(this, id);
+        this.result = <any>await this
             .instance!
             .start()
-            .then(success => ({ success }))
-            .catch(error => ({ error }))) as { error?: Error; success?: Messaging.ServiceResult["results"]; };
-        this.result = success;
-        this.error = error;
+            .catch(error => {
+                console.error(error);
+                return ({ error, winners: [], losers: [] });
+            });
         delete this.instance;
-        await this.broadcast(<Messaging.ServiceResult>{ type: 'end-service', results: success, error });
-        await Promise.all(this.seats.map(seat => seat.terminal?.prompt({ type: "number", name: 'ready', resolved: 0, clobber: true })));
+        return this.result!;
     }
 }

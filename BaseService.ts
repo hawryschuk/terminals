@@ -1,16 +1,40 @@
+import { Terminal } from "./Terminal";
 import { Messaging } from "./Messaging";
-import { Seat } from "./Seat";
-
+import { Table } from "./Table";
+import { Util } from '@hawryschuk-common/util';
 
 export abstract class BaseService {
     static USERS: number | number[] | '*';
     static NAME: string;
 
-    constructor(public seats: Seat[]) { }
+    get service() { return (this.constructor as typeof BaseService).NAME; }
 
-    get terminals() { return this.seats.map(s => s.terminal!) }
+    constructor(public table: Table<BaseService>, public id = Util.UUID) { }
 
-    abstract start(): Promise<Messaging.ServiceResult['results']>;
+    get terminals() { return this.table.terminals; }
 
-    async broadcast(message: any) { return await Promise.all(this.terminals.map(terminal => terminal.send(message))); }
+    get users() { return this.table.sitting; }
+
+    abstract start(): Promise<{ winners: Terminal[]; losers: Terminal[]; error?: any; }>;
+
+    async broadcast(message: any) {
+        const { id, service } = this;
+        if (!this.terminals) debugger;
+        return await Promise.all(this.terminals.map(terminal => terminal.send<Messaging.Service.Message>({
+            type: 'service-message',
+            message,
+            service,
+            id
+        })));
+    }
+
+    async send(message: any, ...recipients: Terminal[]) {
+        const { id, service } = this;
+        return await Promise.all(recipients.map(terminal => terminal.send<Messaging.Service.Message>({
+            type: 'service-message',
+            message,
+            service,
+            id
+        })));
+    }
 }

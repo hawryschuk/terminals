@@ -25,75 +25,41 @@ export class ServiceCenterClient {
     constructor(public terminal: Terminal) { }
 
     get Users() {
-        const { Tables, Table } = this;
         const { service, table } = this.terminal.input;
-        const users = this.terminal.history.filter(i => i.message?.type === 'users').map(item => item.message as Messaging.Users).pop()?.users || [];
+        const users = this.terminal.history.filter(i => i.message?.type === 'users').map(item => item.message as Messaging.User.List).pop()?.users || [];
         const messages = this.terminal
             .history
             .filter(m => m.type === 'stdout' && m.message?.type === 'user-status')
-            .map(({ message, time }) => ({ ...message, time }) as Messaging.UserStatus & { time: number; });
+            .map(({ message, time }) => ({ ...message, time }) as Messaging.User.Status & { time: number; });
+        const online = Array.from(messages.reduce(
+            (users, message) => {
+                if (message.status === 'online') users.set(message.name, { name: message.name });
+                if (message.status === 'offline') users.delete(message.name);
+                if (message.status === 'joined-service') users.get(message.name)!.service = message.id;
+                if (message.status === 'left-service') users.get(message.name)!.service = undefined;
+                if (message.status === 'sat-down') users.get(message.name)!.seat = message.seat;
+                if (message.status === 'stood-up') users.get(message.name)!.seat = undefined;
+                if (message.status === 'joined-table') users.get(message.name)!.table = message.id;
+                if (message.status === 'left-table') users.get(message.name)!.table = undefined;
+                if (message.status === 'created-table') users.get(message.name)!.table = message.id;
+                if (message.status === 'ready') users.get(message.name)!.ready = true;
+                if (message.status === 'unready') users.get(message.name)!.ready = false;
+                return users;
+            },
+            users.reduce((all, user) => {
+                all.set(user.name, user)
+                return all;
+            }, new Map<string, typeof users[number]>())
+        )
+            .values());
         return new class Users {
-            get Online() {
-                return Array.from(messages.reduce(
-                    (users, message) => {
-                        if (message.status === 'online') users.set(message.name, { name: message.name });
-                        if (message.status === 'offline') users.delete(message.name);
-                        if (message.status === 'joined-service') users.get(message.name)!.service = message.id;
-                        if (message.status === 'left-service') users.get(message.name)!.service = undefined;
-                        if (message.status === 'sat-down') users.get(message.name)!.seat = message.seat;
-                        if (message.status === 'stood-up') users.get(message.name)!.seat = undefined;
-                        if (message.status === 'joined-table') users.get(message.name)!.table = message.id;
-                        if (message.status === 'left-table') users.get(message.name)!.table = undefined;
-                        if (message.status === 'created-table') users.get(message.name)!.table = message.id;
-                        return users;
-                    },
-                    users.reduce((all, user) => {
-                        all.set(user.name, user)
-                        return all;
-                    }, new Map<string, typeof users[number]>())
-                )
-                    .values());
-            }
-            get Service() {
-                return Util.where(this.Online, { service });
-                // return messages.reduce((users, message) => {
-                //     if (message.status === 'joined-service' && message.id === service) users.add(message.name);
-                //     if (message.status === 'left-service' && message.id === service) users.delete(message.name);
-                //     return users;
-                // }, this.Online);
-            }
-            get Table() {
-                return Util.where(this.Online, { table });
-                // return Table?.users || [];
-                // return messages.reduce((users, message) => {
-                //     if (message.status === 'joined-table' && message.id === table) users.add(message.name);
-                //     if (message.status === 'left-table' && message.id === table) users.delete(message.name);
-                //     return users;
-                // }, new Set<string>);
-            }
-            get Sitting() {
-                return Table?.sitting || [];
-                // return messages.reduce((users, message) => {
-                //     if (message.status === 'sat-down' && message.id === table) users.add(message.name);
-                //     if (message.status === 'stood-up' && message.id === table) users.delete(message.name);
-                //     return users;
-                // }, this.Table);
-            }
-            get Ready() {
-                return Table?.ready || [];
-                // return messages.reduce((users, message) => {
-                //     if (message.status === 'ready' && message.id === table) users.add(message.name);
-                //     if (message.status === 'unready' && message.id === table) users.delete(message.name);
-                //     return users;
-                // }, this.Table);
-            }
-            get Standing() {
-                return Table?.standing || [];
-                // return new Set(Util.removeElements([...this.Table], ...this.Sitting));
-            }
-            get Unready() {
-                return Util.without(this.Sitting, this.Ready);
-            }
+            get Online() { return online }
+            get Service() { return Util.where(this.Online, { service }); }
+            // get Table() { return Util.where(this.Online, { table }); }
+            // get Sitting() { return this.Online.filter(user => user.seat); }
+            // get Standing() { return Util.without(this.Table, this.Sitting); }
+            // get Ready() { return this.Online.filter(user => user.ready); }
+            // get Unready() { return Util.without(this.Sitting, this.Ready); }
         }
     }
 
@@ -104,7 +70,7 @@ export class ServiceCenterClient {
         const messages = this.terminal
             .history
             .filter(m => m.type === 'stdout' && m.message?.type === 'message')
-            .map(({ message, time }) => ({ ...message, time }) as Messaging.Message & { time: number; })
+            .map(({ message, time }) => ({ ...message, time }) as Messaging.Chat & { time: number; })
         return new class Messages {
             get Everyone() { return Util.where(messages, { to: 'everyone' }); }
             get Lounge() { return Util.where(messages, { to: 'lounge', id: service }); }
@@ -138,38 +104,44 @@ export class ServiceCenterClient {
      */
     get Tables() {
         const index = this.terminal.history.findIndex(m => m.message?.type === 'tables');
-        const item: Messaging.Tables['tables'] = this.terminal.history[index]?.message?.tables || [];
+        const item: Messaging.Table.List['tables'] = this.terminal.history[index]?.message?.tables || [];
         type TTable = typeof item[number];
         class Table implements TTable {
             id!: string;
-            sitting!: Array<string | undefined>;
+            seats!: Array<string | undefined>;
             standing!: string[];
             ready!: string[];
             service!: string;
-            get empty() { return this.sitting.length - this.sitting.filter(Boolean).length }
-            get users() { return [...this.sitting, ...this.standing].filter(Boolean) as string[]; }
+            get empty() { return this.seats.length - this.sitting.length; }
+            get users() { return [...this.sitting, ...this.standing]; }
+            get sitting() { return this.seats.filter(Boolean) as string[]; }
             constructor(table: TTable) { Object.assign(this, table); }
         }
         return this.terminal.history.reduce((tables, item, i, arr) => {
             if (i > index && item.message?.type === 'user-status') {
-                const { name, id, seats, seat, service } = item.message as Messaging.UserStatus;
-                let { status } = item.message as Messaging.UserStatus;
-                const table = tables.find(table => table.users.includes(name))!;
-                if (!table && /stood|table|sat|ready/.test(status) && !/created/.test(status)) {
-                    console.error('anomaly-no-table', item, arr.slice(0, i));
-                    debugger;
-                }
+                const { name, id, seats, seat, service } = item.message as Messaging.User.Status;
+                let { status } = item.message as Messaging.User.Status;
+
                 if (status == 'created-table')
                     tables.push(new Table({
                         id: id!,
                         standing: [name],
-                        sitting: new Array(seats!).fill(undefined),
+                        seats: new Array(seats!).fill(undefined),
                         ready: [],
                         service: service!,
                     }));
 
-                if ((status === 'stood-up' || status === 'offline' || status === 'left-table') && table.sitting.includes(name))
-                    table.sitting[table.sitting.indexOf(name)] = undefined;
+                const table = status === 'joined-table'
+                    ? Util.findWhere(tables, { id })!
+                    : tables.find(table => table.users.includes(name))!;
+
+                if (!table && /stood|table|sat|ready/.test(status) && !/created/.test(status)) {
+                    console.error('anomaly-no-table', item, arr.slice(0, i));
+                    debugger;
+                }
+
+                if ((status === 'stood-up' || status === 'offline' || status === 'left-table') && table.seats.includes(name))
+                    table.seats[table.seats.indexOf(name)] = undefined;
 
                 if (status === 'stood-up')
                     table.standing.push(name);
@@ -188,7 +160,7 @@ export class ServiceCenterClient {
                     table.standing.push(name);
 
                 if (status === 'sat-down') {
-                    table.sitting[seat!] = name;
+                    table.seats[seat! - 1] = name;
                     Util.removeElements(table.standing, name);
                 }
 
@@ -208,7 +180,7 @@ export class ServiceCenterClient {
         return !!started && (!ended || this.terminal.history.indexOf(ended) < this.terminal.history.indexOf(started));
     }
 
-    get ServiceEnded(): Messaging.ServiceResult['results'] | undefined {
+    get ServiceEnded(): Messaging.Service.End['results'] | undefined {
         const started = this.terminal.history.filter(m => m.message?.type == 'start-service').pop();
         const ended = this.terminal.history.filter(m => m.message?.type == 'end-service').pop();
         return !!ended && this.terminal.history.indexOf(ended) > this.terminal.history.indexOf(started!)
@@ -251,20 +223,28 @@ export class ServiceCenterClient {
         await this.SelectMenu('Create Table');
         const Service = await this.Service;
         const willPromptForSeats = Service!.USERS instanceof Array || Service!.USERS === '*';
-        if (seats && willPromptForSeats) await this.terminal.answer({ seats });
-        if (seats || !willPromptForSeats) await Util.waitUntil(() => this.terminal.input.table as string);
-        return { table: this.terminal.input.table, requiresSeats: willPromptForSeats && !seats };
+        const created = seats || !willPromptForSeats;
+        if (seats && willPromptForSeats)
+            await this.terminal.answer({ seats });
+        if (created) {
+            await Util.waitUntil(() => this.terminal.input.table as string);
+            await Util.waitUntil(() => this.Table);
+        }
+        return { table: this.terminal.input.table };
     }
 
     async LeaveTable() {
         await this.SelectMenu('Leave Table');
-        return await Util.waitUntil(() => !this.terminal.input.table);
+        await Util.waitUntil(() => !this.terminal.input.table);
+        await Util.waitUntil(() => !this.Table);
     }
 
     async JoinTable(id: string) {
+        console.log('join table', id)
         await this.SelectMenu('Join Table');
         await this.terminal.answer({ table: id });
         await Util.waitUntil(() => this.terminal.input.table === id);
+        await Util.waitUntil(() => this.Table!.id === id);
     }
 
     async Sit() {

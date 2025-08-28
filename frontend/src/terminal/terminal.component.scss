@@ -55,6 +55,7 @@ section.middle {
             }
 
             input[type=number] {
+                appearance: textfield;
                 -moz-appearance: textfield;
                 width: 200px;
             }

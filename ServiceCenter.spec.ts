@@ -77,9 +77,10 @@ for (const type of ['local', 'remote'])
         });
 
         it('Lets the user create a table', async () => {
-            const { table, requiresSeats } = await client.CreateTable(1);
+            const { table } = await client.CreateTable(1); // TODO: expect to prompt for seats when seats is unprovided
             expect(table).to.be.ok;
-            expect(requiresSeats).to.equal(false);
+            await Util.waitUntil(() => client.Tables!.length === 1);
+            await Util.waitUntil(() => client.Table);
         });
 
         it('Lets the user leave a table', async () => {
@@ -116,7 +117,8 @@ for (const type of ['local', 'remote'])
             await client3.Name(`player3 (${type})`);
             await client2.SetService(TestingServices.GuessingGame.NAME);
             await client3.SetService(TestingServices.GuessingGame.NAME);
-            await client2.CreateTable(2);
+            const { table } = await client2.CreateTable(2);
+            expect(table).to.be.ok;
         });
 
         it('Lets the Service operate the terminals AFTER every Seat at the Table is ready and the Service started', async () => {
