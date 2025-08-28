@@ -23,13 +23,13 @@
         </button>
     </form>
 
-    <div *ngIf="connected" id="connected">
+    <div *ngIf="connected && Client.Users as Users" id="connected">
 
         <div id="service-center-related">
             <div id="everyone">
                 <h3> Everyone </h3>
                 <ol>
-                    <li *ngFor="let user of Client.Users!.Online"> {{ user.name }} </li>
+                    <li *ngFor="let user of Users.Online"> {{ user.name }} </li>
                 </ol>
                 <form *ngIf="menu?.includes('Message Everyone')"
                     (ngSubmit)="publicMessage.value && client.Message.Everyone(publicMessage.value); publicMessage.value = ''; ">
@@ -48,8 +48,8 @@
                 <div *ngIf="terminal.prompts.seats?.[0] as seats">
 
                     <ng-container *ngIf="seats.type=='number'">
-                        <form (ngSubmit)="seats.value && terminal.respond(seats.value,'seats')">
-                            <input #seats type="number" min="1" step="1" required placeholder="# Seats">
+                        <form #form="ngForm" (ngSubmit)="terminal.respond(form.value.seats,'seats')">
+                            <input ngModel name="seats" type="number" min="1" step="1" required placeholder="# Seats">
                         </form>
                     </ng-container>
 
@@ -110,7 +110,7 @@
 
                 <h5> Seats </h5>
                 <ol id="seats">
-                    <li *ngFor="let name of client.Table!.sitting"
+                    <li *ngFor="let name of client.Table!.seats"
                         [attr.data-ready]="client.Table!.ready.includes(name!)" [attr.data-empty]="!name">
                         {{ name || 'empty' }}
                     </li>

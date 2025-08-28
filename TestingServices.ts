@@ -1,6 +1,5 @@
 import { Util } from "@hawryschuk-common/util";
 import { BaseService } from "./BaseService";
-import { Messaging } from "Messaging";
 
 /** For testing only */
 export namespace TestingServices {

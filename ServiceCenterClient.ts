@@ -2,7 +2,7 @@ import { Util } from "@hawryschuk-common/util";
 import { MinimalHttpClient } from "./MinimalHttpClient";
 import { Messaging } from "./Messaging";
 import { BaseService } from "./BaseService";
-import { Terminal } from "./Terminal";
+import { Terminal, TerminalActivity } from "./Terminal";
 import { WebTerminal } from "./WebTerminal";
 import { stat } from "fs";
 
@@ -10,7 +10,7 @@ import { stat } from "fs";
  * A) BASEURI to a remote Service Center
  * B) TERMINAL already connected to a Service Center ( local/remote application )
 */
-export class ServiceCenterClient {
+export class ServiceCenterClient<T = any> {
 
     static async create({ terminal, httpClient, baseuri }: { terminal?: Terminal; httpClient?: MinimalHttpClient; baseuri?: string; } = {}) {
         terminal ||= (baseuri || httpClient)
@@ -174,32 +174,43 @@ export class ServiceCenterClient {
         }, item.map(table => new Table(table)));
     }
 
-    get ServiceStarted() {
-        const started = this.terminal.history.filter(m => m.message?.type == 'start-service').pop();
-        const ended = this.terminal.history.filter(m => m.message?.type == 'end-service').pop();
-        return !!started && (!ended || this.terminal.history.indexOf(ended) < this.terminal.history.indexOf(started));
-    }
+    get ServiceStarted() { return !!this.ServiceActivity }
 
     get ServiceEnded(): Messaging.Service.End['results'] | undefined {
-        const started = this.terminal.history.filter(m => m.message?.type == 'start-service').pop();
-        const ended = this.terminal.history.filter(m => m.message?.type == 'end-service').pop();
-        return !!ended && this.terminal.history.indexOf(ended) > this.terminal.history.indexOf(started!)
-            ? ended.message.results
+        const last = this.ServiceActivity?.pop();
+        return last?.message?.type === 'end-service'
+            && last.message.results
+            || undefined;
+    }
+
+    get Won() { return this.ServiceEnded?.winners.includes(this.terminal.input.Name); }
+    get Lost() { return this.ServiceEnded?.losers.includes(this.terminal.input.Name); }
+
+    /** Service Terminal-Activity pertaining to the active Table */
+    get ServiceActivity() {
+        const { terminal } = this;
+        const { table } = terminal.input;
+        const history: Array<TerminalActivity<Messaging.Service.Start | Messaging.Service.End | Messaging.Service.Message<T>>> = terminal.history as any;
+        const serviceHistory = history.filter(m => m.message && (m.message.type === 'start-service' || m.message.type === 'end-service' || m.message.type === 'service-message'));
+        const started: TerminalActivity<Messaging.Service.Start> = serviceHistory.filter(m => m.message!.type === 'start-service').pop() as any;
+        const id = started?.message!.id;            // service instance id
+        const [last] = serviceHistory.slice(-1);
+        // if (!last?.message) debugger;
+        return started &&
+            started!.message!.table === table       // same table
+            && last.message!.id === id              // same service instance
+            ? serviceHistory
+                .slice(serviceHistory.indexOf(started) + 1)
+                .filter(m => m.message!.id == id
+                    && (m.message!.type === 'end-service' || m.message!.type === 'service-message'))
             : undefined;
     }
 
-    get Won() { return this.ServiceEnded?.winners.includes(this.terminal.id); }
-    get Lost() { return this.ServiceEnded?.losers.includes(this.terminal.id); }
-
-    get State() {
-        const { terminal } = this;
-        const started = terminal.history.filter(m => m.message?.type == 'start-service').pop();
-        const ended = terminal.history.filter(m => m.message?.type == 'end-service').pop();
-        const state = terminal.history.filter(m => m.message?.type === 'state').pop();
-        return started && state
-            && (!ended || terminal.history.indexOf(started) > terminal.history.indexOf(ended))
-            && terminal.history.indexOf(state) > terminal.history.indexOf(started)
-            && state!.message!.state
+    get ServiceMessages(): T[] {
+        return this
+            .ServiceActivity!
+            .filter(i => i.message!.type === 'service-message')
+            .map(i => (i.message as Messaging.Service.Message).message)
     }
 
     get Results() {

@@ -1,8 +1,8 @@
 import { Prompt } from './Prompt';
 
-export interface TerminalActivity {
+export interface TerminalActivity<T = any> {
     type: string | 'stdout' | 'prompt';
     options?: Prompt;
-    message?: any;
+    message?: T;
     time: number;
 }

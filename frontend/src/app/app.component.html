@@ -2,9 +2,10 @@
 
   <h1> Terminal :: Service Center :: Sample </h1>
 
-  <app-table-service [terminal]="terminal" [offline]="true">
+  <app-table-service [terminal]="terminal" [serviceCenter]="serviceCenter">
     <!-- Here we can put the UI interfaces for our services -->
     <div *ngIf="terminal.input.service == 'Brownie Points'"> You Won!!! </div>
+
     <div *ngIf="terminal.input.service == 'Guessing Game'">
       <h3> !! Guessing Game !! </h3>
       <div class="won" *ngIf="client.Won"> You won! Omg! </div>

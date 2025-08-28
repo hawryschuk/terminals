@@ -1,8 +1,8 @@
 import { ChangeDetectorRef, Component, ElementRef, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Util } from '@hawryschuk-common/util';
-import { Prompt, ServiceCenter, ServiceCenterClient, Terminal, TestingServices, Messaging } from '@hawryschuk-terminal-restapi';
-import { CommonModule } from 'node_modules/@angular/common';
-import { FormsModule } from 'node_modules/@angular/forms';
+import { ServiceCenter, ServiceCenterClient, Terminal } from '@hawryschuk-terminal-restapi';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { BehaviorSubject } from 'rxjs';
 
 @Component({
@@ -17,13 +17,12 @@ export class TableServiceComponent implements OnInit, OnDestroy {
     (window as any).tableService = this;
   }
 
-  @Input({ required: false }) offline = false;
   @Input({ required: true }) terminal!: Terminal;
   @ViewChild('container') private container!: ElementRef;
   scrollTop$ = new BehaviorSubject<number>(0);
 
   async ngOnInit() {
-    // this.connect(0);    this.terminal.answer({ name: 'joe', service: 'Guessing Game', menu: ['Create Table', 'Sit', 'Ready'], seats: 1, guess: 1 });
+    // this.connect(0); //    this.terminal.answer({ name: 'joe', service: 'Guessing Game', menu: ['Create Table', 'Sit', 'Ready'], seats: 1, guess: 1 });
 
     /** Ubsubcribes from the terminal when the Component is destroyed */
     this.ngOnDestroy = this
@@ -61,24 +60,23 @@ export class TableServiceComponent implements OnInit, OnDestroy {
       || 'service-in-progress'
   }
 
-
   //#region Offline Mode
-  serviceCenter!: ServiceCenter;
-
-  get connected() { return !this.offline || !!this.serviceCenter }
-
+  @Input({ required: false }) serviceCenter?: ServiceCenter;
+  private _connected = false;
   private _connecting = false;
-  get connecting() { return this.offline && this._connecting && !this.serviceCenter }
+  set connected(c: boolean) { this._connected = true; }
+  get connected() { return !this.serviceCenter || this._connected; }
+  get connecting() { return !this.connected && this._connecting; }
   set connecting(c: boolean) { this._connecting = c; }
 
   async connect(delay = 1000) {
-    this.connecting = true;
-    await Util.pause(delay);
-    this.serviceCenter = new ServiceCenter()
-      .register(TestingServices.BrowniePoints, TestingServices.GuessingGame);
-    this.serviceCenter.join(this.terminal);
+    if (!this.connecting && !this.connected) {
+      this.connecting = true;
+      await Util.pause(delay);
+      this.serviceCenter!.join(this.terminal);
+      this.connected = true;
+    }
+    this.connected = true;
+    //#endregion
   }
-
-  //#endregion
-
 }

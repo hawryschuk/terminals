@@ -57,7 +57,7 @@ export namespace Messaging {
             service: string;
             id: string;
             table: string;
-        }
+        };
 
         export type End = {
             type: 'end-service';
@@ -67,11 +67,11 @@ export namespace Messaging {
             results?: { winners: string[]; losers: string[]; error?: Error; };
         };
 
-        export type Message = {
+        export type Message<T = any> = {
             type: 'service-message';
             service: string;
             id: string;
-            message: any;
+            message: T;
         }
     }
 }

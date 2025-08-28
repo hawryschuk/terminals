@@ -17,7 +17,7 @@ export abstract class BaseService {
 
     abstract start(): Promise<{ winners: Terminal[]; losers: Terminal[]; error?: any; }>;
 
-    async broadcast(message: any) {
+    async broadcast<T = any>(message: T) {
         const { id, service } = this;
         if (!this.terminals) debugger;
         return await Promise.all(this.terminals.map(terminal => terminal.send<Messaging.Service.Message>({
@@ -28,7 +28,7 @@ export abstract class BaseService {
         })));
     }
 
-    async send(message: any, ...recipients: Terminal[]) {
+    async send<T = any>(message: T, ...recipients: Terminal[]) {
         const { id, service } = this;
         return await Promise.all(recipients.map(terminal => terminal.send<Messaging.Service.Message>({
             type: 'service-message',
