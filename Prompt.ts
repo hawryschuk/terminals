@@ -12,7 +12,7 @@ export type PromptType =
     | "date"
     | "autocompleteMultiselect";
 
-export interface Prompt<T=any> {
+export interface Prompt<T = any> {
     type: PromptType; // text number multiple toggle
     name: string;
     message?: string;

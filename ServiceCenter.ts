@@ -36,7 +36,7 @@ export class ServiceCenter {
             type: 'services',
             services: Object
                 .entries(this.registry)
-                .map(([id, { NAME: name }]) => ({ id, name }))
+                .map(([id, { NAME: name, USERS: seats }]) => ({ id, name, seats }))
         });
 
         /** The initial user list -- afterwards the client will augment on each incremental event */
@@ -94,6 +94,17 @@ export class ServiceCenter {
         );
     }
 
+    /** Continuously go through each terminal , and service them : 
+     * 1) Name registration
+     * 2) Service Selection
+     * 3) Menu
+     * 4.1) Chat All/Service/Table/Direct
+     * 4.2) Create/Join/Leave Table
+     * 5) Sit/Stand
+     * 6) Ready/Unready
+     * 7) Start Service
+     * 8) Distribute results
+     */
     private async maintain() {
         while (!this.finished) {
             for (const terminal of this.terminals) {
@@ -138,24 +149,27 @@ export class ServiceCenter {
                                 title: 'Create Table',
                                 disabled: !!table || !!terminal.prompts.seats,
                                 value: async () => {
-                                    const seats: number = await (async () => {
+                                    const seats = await (async () => {
                                         if (typeof service.USERS === 'number')
                                             return service.USERS;
                                         else if (service.USERS instanceof Array)
-                                            return await terminal.prompt({ type: 'select', name: 'seats', choices: service.USERS.map(seats => ({ title: `${seats}`, value: seats })) });
+                                            return await terminal.prompt<number>({ type: 'select', name: 'seats', choices: service.USERS.map(seats => ({ title: `${seats}`, value: seats })) });
                                         else if (service.USERS === '*')
-                                            return await terminal.prompt({ type: 'number', name: 'seats' });
+                                            return await terminal.prompt<number>({ type: 'number', name: 'seats' });
+                                        else return undefined
                                     })();
-                                    const id = Util.UUID;
-                                    const table = new Table({ service, seats, creator: terminal, id });
-                                    this.tables.push(table);
-                                    await this.broadcast<Messaging.User.Status>({ type: 'user-status', name: terminal.input.Name, status: 'created-table', id: table.id, seats, service: service.NAME });
-                                    await terminal.prompt({ type: 'text', name: 'table', resolved: table.id });
+                                    if (seats) {
+                                        const id = Util.UUID;
+                                        const table = new Table({ service, seats, creator: terminal, id });
+                                        this.tables.push(table);
+                                        await this.broadcast<Messaging.User.Status>({ type: 'user-status', name: terminal.input.Name, status: 'created-table', id: table.id, seats, service: service.NAME });
+                                        await terminal.prompt({ type: 'text', name: 'table', resolved: table.id });
+                                    }
                                 }
                             },
                             {
                                 title: 'Join Table',
-                                disabled: !!table || !tables.length || !!terminal.prompts.table,
+                                disabled: !!table || !tables.length || !!terminal.prompts.table || !!terminal.prompts.seats,
                                 value: async () => {
                                     const id = await terminal.prompt({
                                         type: 'select',

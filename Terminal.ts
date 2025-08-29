@@ -15,7 +15,10 @@ export class Terminal extends Model {
 
     get available() { return !!this.owner && !this.finished; }
 
-    async finish() { this.finished ||= new Date(); }
+    async finish() {
+        this.finished ||= new Date();
+        await this.notify(this.history.length - 1);
+    }
 
     constructor({
         id = Util.UUID,
@@ -39,7 +42,7 @@ export class Terminal extends Model {
     }
 
     private get subscribers(): { handler: (index?: number) => any; event?: string; }[] { return (this as any)[Symbol.for('subscribers')] ||= []; }
-    protected async notify(index: number) { await Promise.all(this.subscribers.map(s => s.handler(index))); }
+    protected notify(index: number) { return Promise.all(this.subscribers.map(s => s.handler(index))); }
 
     /** Get the answers to the questions prompted 
      * -- Will erase old answers when re-prompted and unresolved
@@ -150,7 +153,9 @@ export class Terminal extends Model {
         }, { pause: 2 });
     }
 
-    async prompt(options: Prompt, waitResult = true): Promise<any> {
+    prompt<T = any>(options: Prompt<T>): Promise<T>;
+    prompt<T = any>(options: Prompt<T>, waitResult: false): Promise<{ result: Promise<T>, clobbered: boolean; }>;
+    async prompt<T = any>(options: Prompt<T>, waitResult = true) {
         if (this.finished) throw new Error('finished');
 
         // Overwrite the first one , and remove  : TODO : think , auto-clobber
@@ -173,7 +178,7 @@ export class Terminal extends Model {
 
         const clobbered = index === this.history.length;
 
-        const result = Util
+        const result: Promise<T> = Util
             .waitUntil(
                 async () => {
                     if (this.finished) throw new Error('finished');

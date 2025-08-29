@@ -23,7 +23,7 @@
         </button>
     </form>
 
-    <div *ngIf="connected && Client.Users as Users" id="connected">
+    <div *ngIf="connected && client.Users as Users" id="connected">
 
         <div id="service-center-related">
             <div id="everyone">
@@ -34,7 +34,7 @@
                 <form *ngIf="menu?.includes('Message Everyone')"
                     (ngSubmit)="publicMessage.value && client.Message.Everyone(publicMessage.value); publicMessage.value = ''; ">
                     <ul>
-                        <li *ngFor="let message of Client.Messages!.Everyone">
+                        <li *ngFor="let message of client.Messages!.Everyone">
                             {{ message.time }} : {{ message.from }} : {{ message.message }}
                         </li>
                     </ul>
@@ -66,7 +66,7 @@
             <div id="Lounge">
                 <h4> Lounge </h4>
                 <table>
-                    <tr *ngFor="let user of Client.Users!.Service">
+                    <tr *ngFor="let user of client.Users!.Service">
                         <td>{{user.name}}</td>
                         <td>{{user.table}}</td>
                     </tr>
@@ -75,7 +75,7 @@
                 <form id="lounge-chat" *ngIf="menu?.includes('Message Lounge')"
                     (ngSubmit)="loungeMessage.value && client.Message.Lounge(loungeMessage.value); loungeMessage.value = ''; ">
                     <ul>
-                        <li *ngFor="let message of Client.Messages!.Lounge">
+                        <li *ngFor="let message of client.Messages!.Lounge">
                             {{ message.time }} : {{ message.from }} : {{ message.message }}
                         </li>
                     </ul>
@@ -90,7 +90,7 @@
                 <form id="table-chat" *ngIf="menu?.includes('Message Table')"
                     (ngSubmit)="tableMessage.value && client.Message.Table(tableMessage.value); tableMessage.value = ''; ">
                     <ul>
-                        <li *ngFor="let message of Client.Messages!.Table">
+                        <li *ngFor="let message of client.Messages!.Table">
                             {{ message.time }} : {{ message.from }} : {{ message.message }}
                         </li>
                     </ul>

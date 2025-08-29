@@ -29,8 +29,6 @@ export class TableServiceComponent implements OnInit, OnDestroy {
       .terminal
       .subscribe({
         handler: async () => {
-          const client = new ServiceCenterClient(this.terminal);
-          Object.assign(this.Client, Util.pick(client, ['Menu', 'Messages', 'Users', 'ServiceStarted', 'ServiceEnded', 'Table']));
           this.cd.markForCheck();
           this.cd.detectChanges();
           this.scrollTop$.next(this.container?.nativeElement.scrollHeight);
@@ -39,12 +37,9 @@ export class TableServiceComponent implements OnInit, OnDestroy {
       .unsubscribe;
   }
 
-  get client() { return new ServiceCenterClient(this.terminal); }
+  get client() { return ServiceCenterClient.getInstance(this.terminal); }
 
-  /** Cached Computed Terminal/Service State */
-  Client: Partial<ServiceCenterClient> = {};
-
-  get menu() { return this.Client.Menu?.choices?.filter(c => !c.disabled).map(c => c.value); }
+  get menu() { return this.client.Menu?.choices?.filter(c => !c.disabled).map(c => c.value); }
 
   ngOnDestroy = (): void => { }
 

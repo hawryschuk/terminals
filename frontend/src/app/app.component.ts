@@ -16,7 +16,7 @@ import { FormsModule } from '@angular/forms';
 })
 export class AppComponent implements OnInit {
   terminal = new Terminal;
-  client = new ServiceCenterClient(this.terminal);
+  client = ServiceCenterClient.getInstance(this.terminal);
   serviceCenter = new ServiceCenter().register(TestingServices.BrowniePoints, TestingServices.GuessingGame);
 
   guesses?: number[];

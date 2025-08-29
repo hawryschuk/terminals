@@ -66,7 +66,7 @@ export class WebTerminal extends Terminal {
         });
     }
 
-    override async prompt(options: Prompt, waitResult = true) {
+    override async prompt<T = any>(options: Prompt<T>, waitResult = true) {
         const { index } = await this.atomic(async () => {
             const { history: { length } } = this;
             await this.request({ method: 'put', url: `terminal/${this.id}`, body: { type: 'prompt', options } });

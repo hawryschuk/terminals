@@ -20,7 +20,7 @@ for (const type of ['local', 'remote'])
         before(async () => {
             const httpClient = type == 'remote' ? WebTerminal.httpClient : undefined;
             server.serviceCenter.finish();
-            serviceCenter = server.serviceCenter = new ServiceCenter;
+            serviceCenter = server.serviceCenter = new ServiceCenter().register(TestingServices.BrowniePoints, TestingServices.GuessingGame);
             client = await ServiceCenterClient.create({ httpClient });
             client2 = await ServiceCenterClient.create({ httpClient });
             client3 = await ServiceCenterClient.create({ httpClient });
@@ -36,7 +36,7 @@ for (const type of ['local', 'remote'])
         });
 
         it('Allows registering services', () => {
-            serviceCenter.register(TestingServices.BrowniePoints, TestingServices.GuessingGame);
+
         });
 
         it('Displays registered services', () => {

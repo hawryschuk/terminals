@@ -1,10 +1,9 @@
 import { Util } from "@hawryschuk-common/util";
 import { MinimalHttpClient } from "./MinimalHttpClient";
 import { Messaging } from "./Messaging";
-import { BaseService } from "./BaseService";
 import { Terminal, TerminalActivity } from "./Terminal";
 import { WebTerminal } from "./WebTerminal";
-import { stat } from "fs";
+import { CachedWrapper } from "./CachedWrapper";
 
 /** Service Center Client : Facilitates the operation of a Service Center : Connects via supplying either :
  * A) BASEURI to a remote Service Center
@@ -19,10 +18,29 @@ export class ServiceCenterClient<T = any> {
         if (terminal instanceof WebTerminal) {
             await terminal.request({ method: 'get', url: 'service', body: { id: terminal.id } });
         }
-        return new ServiceCenterClient(terminal!);
+        return ServiceCenterClient.getInstance(terminal!);
+    }
+
+    private static instances = new WeakMap<Terminal, ServiceCenterClient>;
+    static getInstance<T = any>(terminal: Terminal): ServiceCenterClient<T> {
+        return this.instances.get(terminal) || (() => {
+            const instance = new ServiceCenterClient(terminal);
+            const cached = new CachedWrapper(instance);
+            terminal.subscribe({ handler: () => cached.ClearCache() });
+            return this.instances
+                .set(terminal, cached.proxy)
+                .get(terminal)!
+        })();
     }
 
     constructor(public terminal: Terminal) { }
+
+    get NameInUse() { return this.terminal.prompts.name && !this.terminal.input.Name && this.terminal.history.some(i => i.message?.type === 'name-in-use'); }
+    get Services() {
+        const services = (this.terminal.history as TerminalActivity<Messaging.Service.List>[]).find(m => m.message?.type === 'services')?.message?.services;
+        return services;
+    }
+    get Service() { const { service } = this.terminal.input; return Util.findWhere(this.Services || [], { name: service }); }
 
     get Users() {
         const { service, table } = this.terminal.input;
@@ -55,13 +73,15 @@ export class ServiceCenterClient<T = any> {
         return new class Users {
             get Online() { return online }
             get Service() { return Util.where(this.Online, { service }); }
-            // get Table() { return Util.where(this.Online, { table }); }
-            // get Sitting() { return this.Online.filter(user => user.seat); }
-            // get Standing() { return Util.without(this.Table, this.Sitting); }
-            // get Ready() { return this.Online.filter(user => user.ready); }
-            // get Unready() { return Util.without(this.Sitting, this.Ready); }
+            get Table() { return Util.where(this.Service, { table }); }
+            get Sitting() { return this.Table.filter(user => user.seat); }
+            get Standing() { return this.Table.filter(user => !user.seat); }
+            get Ready() { return this.Table.filter(user => user.ready); }
+            get Unready() { return this.Table.filter(user => !user.ready); }
         }
     }
+
+    get User() { const { Name: name } = this.terminal.input; return Util.findWhere(this.Users.Online, { name }); }
 
     get Table() { return Util.findWhere(this.Tables, { id: this.terminal.input.table }); }
 
@@ -70,7 +90,7 @@ export class ServiceCenterClient<T = any> {
         const messages = this.terminal
             .history
             .filter(m => m.type === 'stdout' && m.message?.type === 'message')
-            .map(({ message, time }) => ({ ...message, time }) as Messaging.Chat & { time: number; })
+            .map(({ message, time }) => ({ ...message, time }) as Messaging.Chat & { time: number; });
         return new class Messages {
             get Everyone() { return Util.where(messages, { to: 'everyone' }); }
             get Lounge() { return Util.where(messages, { to: 'lounge', id: service }); }
@@ -84,7 +104,6 @@ export class ServiceCenterClient<T = any> {
         const { terminal } = client;
         return new class Message {
             async Everyone(message: string) {
-                console.log('messaging everyone')
                 await client.SelectMenu('Message Everyone');
                 await terminal.answer({ message });
             }
@@ -189,33 +208,26 @@ export class ServiceCenterClient<T = any> {
     /** Service Terminal-Activity pertaining to the active Table */
     get ServiceActivity() {
         const { terminal } = this;
-        const { table } = terminal.input;
-        const history: Array<TerminalActivity<Messaging.Service.Start | Messaging.Service.End | Messaging.Service.Message<T>>> = terminal.history as any;
-        const serviceHistory = history.filter(m => m.message && (m.message.type === 'start-service' || m.message.type === 'end-service' || m.message.type === 'service-message'));
-        const started: TerminalActivity<Messaging.Service.Start> = serviceHistory.filter(m => m.message!.type === 'start-service').pop() as any;
-        const id = started?.message!.id;            // service instance id
-        const [last] = serviceHistory.slice(-1);
-        // if (!last?.message) debugger;
-        return started &&
-            started!.message!.table === table       // same table
-            && last.message!.id === id              // same service instance
-            ? serviceHistory
-                .slice(serviceHistory.indexOf(started) + 1)
-                .filter(m => m.message!.id == id
-                    && (m.message!.type === 'end-service' || m.message!.type === 'service-message'))
-            : undefined;
+        const lastTableActivity = terminal.history.filter(h => h.type === 'prompt' && h.options!.name === 'table').pop();
+        const table = lastTableActivity?.options?.resolved;
+        const history: TerminalActivity[] = table ? terminal.history.slice(terminal.history.indexOf(lastTableActivity)) : [] as any;
+        const serviceHistory = (history as Array<TerminalActivity<Messaging.Service.Start | Messaging.Service.End | Messaging.Service.Message<T>>>)
+            .filter(m => m.message && ( // these messages are sent only to table members
+                m.message.type === 'start-service'
+                || m.message.type === 'end-service'
+                || m.message.type === 'service-message'));
+        const started: TerminalActivity<Messaging.Service.Start> = serviceHistory
+            .filter(m => m.message!.type === 'start-service'
+                && m.message!.table === table).pop() as any;
+        const id = started?.message?.id;
+        return serviceHistory.filter(m => m.message!.id === id);
     }
 
-    get ServiceMessages(): T[] {
-        return this
-            .ServiceActivity!
-            .filter(i => i.message!.type === 'service-message')
-            .map(i => (i.message as Messaging.Service.Message).message)
-    }
+    get ServiceInstanceId() { return this.ServiceActivity?.[0].message?.id }
 
-    get Results() {
-        return Util.waitUntil(() => this.ServiceEnded!);
-    }
+    get ServiceMessages(): T[] { return this.ServiceActivity?.filter(i => i.message!.type === 'service-message').map(i => (i.message as Messaging.Service.Message).message) || [] }
+
+    get Results() { return Util.waitUntil(() => this.ServiceEnded!); }
 
     get Menu() { return this.terminal.prompts.menu?.[0] }
 
@@ -232,8 +244,8 @@ export class ServiceCenterClient<T = any> {
 
     async CreateTable(seats?: number) {
         await this.SelectMenu('Create Table');
-        const Service = await this.Service;
-        const willPromptForSeats = Service!.USERS instanceof Array || Service!.USERS === '*';
+        const Service = this.Service;
+        const willPromptForSeats = Service!.seats instanceof Array || Service!.seats === '*';
         const created = seats || !willPromptForSeats;
         if (seats && willPromptForSeats)
             await this.terminal.answer({ seats });
@@ -251,7 +263,6 @@ export class ServiceCenterClient<T = any> {
     }
 
     async JoinTable(id: string) {
-        console.log('join table', id)
         await this.SelectMenu('Join Table');
         await this.terminal.answer({ table: id });
         await Util.waitUntil(() => this.terminal.input.table === id);
@@ -277,19 +288,10 @@ export class ServiceCenterClient<T = any> {
         await this.terminal.answer({ name });
     }
 
-    get Services() { return Util.waitUntil(() => (this.terminal.prompts2.service?.pop()?.choices)!); }
-    get Service(): Promise<undefined | { value: string; title: string; USERS: (typeof BaseService)['USERS']; }> {
-        return this.Services.then(services => services.find(service => service.value === this.terminal.input.service)) as any;
-    }
-
-    async SetService(title: string) {
-        const { value: id } = Util.findWhere(await this.Services, { title })!;
+    async SetService(name: string) {
+        const { id } = Util.findWhere(this.Services!, { name: name })!;
         await this.terminal.answer({ service: id });
         await Util.waitUntil(() => this.terminal.input.service === id);
-    }
-
-    get NameInUse() {
-        return this.terminal.prompts.name && this.terminal.history.some(i => i.message?.type === 'name-in-use');
     }
 
 }

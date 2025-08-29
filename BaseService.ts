@@ -2,10 +2,12 @@ import { Terminal } from "./Terminal";
 import { Messaging } from "./Messaging";
 import { Table } from "./Table";
 import { Util } from '@hawryschuk-common/util';
+import { Prompt } from "./Prompt";
 
 export abstract class BaseService {
     static USERS: number | number[] | '*';
     static NAME: string;
+    static RESERVED_PROMPT_VARS = ['name', 'Name', 'service', 'menu', 'table', 'seat', 'message'] as const;
 
     get service() { return (this.constructor as typeof BaseService).NAME; }
 
@@ -36,5 +38,15 @@ export abstract class BaseService {
             service,
             id
         })));
+    }
+
+    async prompt<S extends string>(options: Prompt & {
+        name: Exclude<S, typeof BaseService['RESERVED_PROMPT_VARS'][number]>;
+        terminal: Terminal;
+    }): Promise<any> {
+        const _options = { ...options } as any;
+        const { terminal } = options;
+        delete _options.terminal;
+        return await terminal.prompt(_options);
     }
 }

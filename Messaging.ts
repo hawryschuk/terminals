@@ -1,3 +1,4 @@
+import { BaseService } from "./BaseService";
 
 export namespace Messaging {
 
@@ -49,7 +50,7 @@ export namespace Messaging {
     export namespace Service {
         export type List = {
             type: 'services',
-            services: Array<{ id: string; name: string; }>;
+            services: Array<{ id: string; name: string; seats: typeof BaseService.USERS }>;
         };
 
         export type Start = {
