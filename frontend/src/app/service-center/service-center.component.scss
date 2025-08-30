@@ -36,6 +36,9 @@
 
         .main {
             min-height: 400px;
+            max-height: calc(100% - 600px);
+            overflow: auto;
+
             display: flex;
             flex-direction: column;
             border: 1px solid red;
@@ -66,6 +69,10 @@
                     background: #f8f8f8;
                     border: 1px solid orange;
                 }
+            }
+
+            #instance-container {
+                flex: 1;
             }
         }
 

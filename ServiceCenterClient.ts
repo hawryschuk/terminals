@@ -223,47 +223,54 @@ export class ServiceCenterClient<T = any> {
     get Lost() { return this.ServiceInstance?.finished?.results?.losers.includes(this.terminal.input.Name); }
 
     /** All instances ran for this service */
-    get ServiceInstances() {
-        const { Service } = this;
-        const history = (Service ? this.terminal.history : []) as Array<TerminalActivity<Messaging.Service.Start | Messaging.Service.End | Messaging.Service.Message<T>>>
-        return history
-            .reduce((instances, item) => {
-                if (item.type === 'stdout' && (
-                    item.message?.type === 'start-service'
-                    || item.message?.type === 'end-service'
-                    || item.message?.type === 'service-message'
-                )) {
-                    const { message } = item;
-                    const { type, service, id } = message;
-                    if (service === Service!.id) {
-                        if (type === 'start-service') {
-                            instances.push({
-                                ...Util.pick(message as Messaging.Service.Start, ['id', 'service', 'table', 'users']),
-                                messages: []
-                            } as any);
-                        }
-                        const instance = Util.findWhere(instances, { id });
-                        if (instance) {
-                            if (type === 'end-service') instance.finished = message;
-                            if (type === 'service-message') instance.messages.push(message.message);
-                        }
-                    }
-                }
-                return instances;
-            }, [] as Array<{
-                service: string;
-                id: string;
-                table: string;
-                users: string[];
-                finished?: Messaging.Service.End;
-                messages: Messaging.Service.Message<T>['message'][];
-            }>);
-    }
-
-    /** Last service instance ran in the current Table */
     get ServiceInstance() {
-        const { Table } = this;
-        return Table ? Util.where(this.ServiceInstances!, { table: Table.id }).pop() : undefined;
+        const { Service } = this;
+        const { UserName, Table } = this;
+        const lastStatus = (this.terminal.history as TerminalActivity<Messaging.User.Status>[])
+            .filter(h =>
+                h.message?.type === 'user-status'
+                && h.message.name == UserName
+                && (h.message.status == 'joined-table'
+                    || h.message.status == 'created-table'
+                    || h.message.status == 'left-table'
+                )
+            )
+            .pop();
+        const history = Service && Table && lastStatus?.message
+            && /joined|created/.test(lastStatus.message.status)
+            && lastStatus.message.id === Table.id
+            ? this.terminal.history.slice(this.terminal.history.indexOf(lastStatus))
+            : [];
+        let instance: undefined | {
+            service: string;
+            id: string;
+            table: string;
+            users: string[];
+            finished?: Messaging.Service.End;
+            messages: Messaging.Service.Message<T>['message'][];
+        };
+        for (const { message } of history) {
+            const ss: Messaging.Service.Start = message,
+                se: Messaging.Service.End = message,
+                sm: Messaging.Service.Message = message;
+
+            if (ss?.type === 'start-service' && ss.table === Table!.id)
+                instance = {
+                    service: ss.service,
+                    id: ss.id,
+                    table: ss.table,
+                    users: ss.users,
+                    finished: undefined,
+                    messages: [],
+                };
+
+            else if (se?.type === 'end-service' && se.id === instance?.id)
+                instance.finished = se;
+
+            else if (sm?.type === 'service-message' && sm.id === instance?.id)
+                instance.messages.push(sm.message);
+        }
+        return instance;
     }
 
     get Results() { return Util.waitUntil(() => this.ServiceInstance?.finished!); }

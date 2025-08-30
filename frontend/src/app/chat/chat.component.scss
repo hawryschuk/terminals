@@ -1,6 +1,7 @@
 :host {
     display: flex;
     flex-direction: column;
+    min-height: 250px;
 }
 
 .container {
@@ -15,8 +16,20 @@
 
     .users {
         width: 300px;
-        overflow: hidden;
         border: 1px solid black;
+
+        tbody {
+            overflow: auto;
+        }
+
+        tfoot {
+            height: 100%;
+        }
+
+        td,
+        th {
+            border: 1px solid black;
+        }
 
         table,
         th,
