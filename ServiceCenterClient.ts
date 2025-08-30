@@ -143,8 +143,9 @@ export class ServiceCenterClient<T = any> {
      * - And from that we can deduce the Users/Table status 
      */
     get Tables() {
-        const index = this.terminal.history.findIndex(m => m.message?.type === 'tables');
-        const item: Messaging.Table.List['tables'] = this.terminal.history[index]?.message?.tables || [];
+        const message = this.terminal.history.filter(m => m.message?.type === 'tables').pop();
+        const index = this.terminal.history.indexOf(message!);
+        const item: Messaging.Table.List['tables'] = message?.message?.tables || [];
         type TTable = typeof item[number];
         class Table implements TTable {
             id!: string;
@@ -162,9 +163,9 @@ export class ServiceCenterClient<T = any> {
         return this.terminal
             .history
             .reduce((tables, item, i, arr) => {
-                if (i > index && item.message?.type === 'user-status') {
+                if (index >= 0 && i > index && item.message?.type === 'user-status') {
                     const { name, id, seats, seat, service } = item.message as Messaging.User.Status;
-                    let { status } = item.message as Messaging.User.Status;
+                    const { status } = item.message as Messaging.User.Status;
 
                     if (status == 'created-table')
                         tables.push(new Table({
@@ -178,11 +179,6 @@ export class ServiceCenterClient<T = any> {
                     const table = status === 'joined-table'
                         ? Util.findWhere(tables, { id })!
                         : tables.find(table => table.users.includes(name))!;
-
-                    if (!table && /stood|table|sat|ready/.test(status) && !/created/.test(status)) {
-                        console.error('anomaly-no-table', item, arr.slice(0, i));
-                        debugger;
-                    }
 
                     if ((status === 'stood-up' || status === 'offline' || status === 'left-table') && table.seats.includes(name))
                         table.seats[table.seats.indexOf(name)] = undefined;
@@ -215,7 +211,7 @@ export class ServiceCenterClient<T = any> {
                         Util.removeElements(table.ready, name);
                 }
                 return tables;
-            }, item.map(table => new Table(table)))
+            }, item.map(table => new Table(Util.shallowClone(table))))
         // .filter(table => {
         //     table.service === this.Service?.id
         // });
@@ -223,67 +219,54 @@ export class ServiceCenterClient<T = any> {
 
     get LargestTable() { return [...this.Tables].sort((a, b) => b.seats.length - a.seats.length).shift()?.seats || []; }
 
-    get ServiceStarted() {
-        return !this.ServiceEnded
-            && this.ServiceActivity[0]?.message as Messaging.Service.Start
-            || undefined
+    get Won() { return this.ServiceInstance?.finished?.results?.winners.includes(this.terminal.input.Name); }
+    get Lost() { return this.ServiceInstance?.finished?.results?.losers.includes(this.terminal.input.Name); }
+
+    /** All instances ran for this service */
+    get ServiceInstances() {
+        const { Service } = this;
+        const history = (Service ? this.terminal.history : []) as Array<TerminalActivity<Messaging.Service.Start | Messaging.Service.End | Messaging.Service.Message<T>>>
+        return history
+            .reduce((instances, item) => {
+                if (item.type === 'stdout' && (
+                    item.message?.type === 'start-service'
+                    || item.message?.type === 'end-service'
+                    || item.message?.type === 'service-message'
+                )) {
+                    const { message } = item;
+                    const { type, service, id } = message;
+                    if (service === Service!.id) {
+                        if (type === 'start-service') {
+                            instances.push({
+                                ...Util.pick(message as Messaging.Service.Start, ['id', 'service', 'table', 'users']),
+                                messages: []
+                            } as any);
+                        }
+                        const instance = Util.findWhere(instances, { id });
+                        if (instance) {
+                            if (type === 'end-service') instance.finished = message;
+                            if (type === 'service-message') instance.messages.push(message.message);
+                        }
+                    }
+                }
+                return instances;
+            }, [] as Array<{
+                service: string;
+                id: string;
+                table: string;
+                users: string[];
+                finished?: Messaging.Service.End;
+                messages: Messaging.Service.Message<T>['message'][];
+            }>);
     }
 
-    get ServiceEnded(): Messaging.Service.End['results'] | undefined {
-        const last = this.ServiceActivity?.slice(-1)?.[0];
-        return last?.message?.type === 'end-service'
-            && last.message.results
-            || undefined;
-    }
-
-    get Won() { return this.ServiceEnded?.winners.includes(this.terminal.input.Name); }
-    get Lost() { return this.ServiceEnded?.losers.includes(this.terminal.input.Name); }
-
-    /** Service Terminal-Activity :
-     * - last service thet started
-     * - pertaining to the active Table
-     * - invalid unless :
-     * - A) all service messages are broadcasted 
-     * - B) user is using the service */
-    get ServiceActivity() {
-        const { terminal } = this;
-        const lastTableActivity = terminal.history.filter(h => h.type === 'prompt' && h.options!.name === 'table').pop();
-        const table = lastTableActivity?.options?.resolved;
-        const history: TerminalActivity[] = table ? terminal.history.slice(terminal.history.indexOf(lastTableActivity)) : [] as any;
-        const serviceHistory = (history as Array<TerminalActivity<Messaging.Service.Start | Messaging.Service.End | Messaging.Service.Message<T>>>)
-            .filter(m => m.message && ( // these messages are sent only to table members
-                m.message.type === 'start-service'
-                || m.message.type === 'end-service'
-                || m.message.type === 'service-message'));
-        const started: TerminalActivity<Messaging.Service.Start> = serviceHistory
-            .filter(m => m.message!.type === 'start-service'
-                && m.message!.table === table).pop() as any;
-        const id = started?.message?.id;
-        return serviceHistory.filter(m => m.message!.id === id);
-    }
-
-    get ServiceInstanceId() { return this.ServiceActivity?.[0].message?.id }
-
+    /** Last service instance ran in the current Table */
     get ServiceInstance() {
-        const { ServiceActivity } = this;
-        const messages = ServiceActivity.map(m => m.message!);
-        const first = messages[0] as Messaging.Service.Start;
-        const last = messages.slice(-1)[0] as Messaging.Service.End;
-        const started = first?.type === 'start-service' ? first : undefined;
-        const finished = last?.type === 'end-service' ? last : undefined;
-        if (started) {
-            return {
-                ...Util.pick(started, ['id', 'service', 'table', 'users']),
-                finished,
-                messages: (Util.without(messages, [started, finished]) as Messaging.Service.Message<T>[]).map(m => m.message!)
-            }
-        } else
-            return undefined;
+        const { Table } = this;
+        return Table ? Util.where(this.ServiceInstances!, { table: Table.id }).pop() : undefined;
     }
 
-    get ServiceMessages(): T[] { return this.ServiceActivity?.filter(i => i.message!.type === 'service-message').map(i => (i.message as Messaging.Service.Message).message) || [] }
-
-    get Results() { return Util.waitUntil(() => this.ServiceEnded!); }
+    get Results() { return Util.waitUntil(() => this.ServiceInstance?.finished!); }
 
     get Menu() { return this.terminal.prompts.menu?.[0] }
 

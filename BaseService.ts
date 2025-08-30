@@ -4,7 +4,7 @@ import { Table } from "./Table";
 import { Util } from '@hawryschuk-common/util';
 import { Prompt } from "./Prompt";
 
-export abstract class BaseService {
+export abstract class BaseService<T = any> {
     static USERS: number | number[] | '*';
     static NAME: string;
     static RESERVED_PROMPT_VARS = ['name', 'Name', 'service', 'menu', 'table', 'seat', 'message'] as const;
@@ -13,7 +13,7 @@ export abstract class BaseService {
 
     get service() { return (this.constructor as typeof BaseService).NAME; }
 
-    constructor(public table: Table<BaseService>, public id = Util.UUID) { }
+    constructor(public table: Table<BaseService<T>>, public id = Util.UUID) { }
 
     get terminals() { return this.table.terminals; }
 

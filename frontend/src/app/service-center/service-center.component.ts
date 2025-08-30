@@ -66,8 +66,8 @@ export class ServiceCenterComponent implements OnInit, OnDestroy {
       || !this.terminal.input.service && 'service-selection'
       || !this.terminal.input.table && 'table-selection'
       || !this.terminal.input.seat && 'observing-table'
-      || !this.terminal.input.ready && (this.client.ServiceEnded ? 'service-finished' : 'unready')
-      || !this.client.ServiceStarted && 'waiting-for-players'
+      || !this.terminal.input.ready && (this.client.ServiceInstance?.finished ? 'service-finished' : 'unready')
+      || !this.client.Table?.started && 'waiting-for-players'
       || 'service-in-progress'
   }
 
