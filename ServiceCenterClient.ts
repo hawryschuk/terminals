@@ -81,6 +81,7 @@ export class ServiceCenterClient<T = any> {
         }
     }
 
+    get UserName(): string | undefined { return this.terminal.input.Name; }
     get User() { const { Name: name } = this.terminal.input; return Util.findWhere(this.Users.Online, { name }); }
 
     get Table() { return Util.findWhere(this.Tables, { id: this.terminal.input.table }); }
@@ -136,62 +137,69 @@ export class ServiceCenterClient<T = any> {
             get sitting() { return this.seats.filter(Boolean) as string[]; }
             constructor(table: TTable) { Object.assign(this, table); }
         }
-        return this.terminal.history.reduce((tables, item, i, arr) => {
-            if (i > index && item.message?.type === 'user-status') {
-                const { name, id, seats, seat, service } = item.message as Messaging.User.Status;
-                let { status } = item.message as Messaging.User.Status;
+        return this.terminal
+            .history
+            .reduce((tables, item, i, arr) => {
+                if (i > index && item.message?.type === 'user-status') {
+                    const { name, id, seats, seat, service } = item.message as Messaging.User.Status;
+                    let { status } = item.message as Messaging.User.Status;
 
-                if (status == 'created-table')
-                    tables.push(new Table({
-                        id: id!,
-                        standing: [name],
-                        seats: new Array(seats!).fill(undefined),
-                        ready: [],
-                        service: service!,
-                    }));
+                    if (status == 'created-table')
+                        tables.push(new Table({
+                            id: id!,
+                            standing: [name],
+                            seats: new Array(seats!).fill(undefined),
+                            ready: [],
+                            service: service!,
+                        }));
 
-                const table = status === 'joined-table'
-                    ? Util.findWhere(tables, { id })!
-                    : tables.find(table => table.users.includes(name))!;
+                    const table = status === 'joined-table'
+                        ? Util.findWhere(tables, { id })!
+                        : tables.find(table => table.users.includes(name))!;
 
-                if (!table && /stood|table|sat|ready/.test(status) && !/created/.test(status)) {
-                    console.error('anomaly-no-table', item, arr.slice(0, i));
-                    debugger;
-                }
-
-                if ((status === 'stood-up' || status === 'offline' || status === 'left-table') && table.seats.includes(name))
-                    table.seats[table.seats.indexOf(name)] = undefined;
-
-                if (status === 'stood-up')
-                    table.standing.push(name);
-
-                if (status === 'offline' || status === 'left-table') {
-                    if (table) {
-                        Util.removeElements(table.standing, name);
-                        Util.removeElements(table.ready, name);
-                    } else if (status === 'left-table') {
-                        console.error('anomaly-no-table', item);
+                    if (!table && /stood|table|sat|ready/.test(status) && !/created/.test(status)) {
+                        console.error('anomaly-no-table', item, arr.slice(0, i));
                         debugger;
                     }
+
+                    if ((status === 'stood-up' || status === 'offline' || status === 'left-table') && table.seats.includes(name))
+                        table.seats[table.seats.indexOf(name)] = undefined;
+
+                    if (status === 'stood-up')
+                        table.standing.push(name);
+
+                    if (status === 'offline' || status === 'left-table') {
+                        if (table) {
+                            Util.removeElements(table.standing, name);
+                            Util.removeElements(table.ready, name);
+                        } else if (status === 'left-table') {
+                            console.error('anomaly-no-table', item);
+                            debugger;
+                        }
+                    }
+
+                    if (status === 'joined-table')
+                        table.standing.push(name);
+
+                    if (status === 'sat-down') {
+                        table.seats[seat! - 1] = name;
+                        Util.removeElements(table.standing, name);
+                    }
+
+                    if (status === 'ready')
+                        table.ready.push(name);
+
+                    if (status === 'unready')
+                        Util.removeElements(table.ready, name);
                 }
-
-                if (status === 'joined-table')
-                    table.standing.push(name);
-
-                if (status === 'sat-down') {
-                    table.seats[seat! - 1] = name;
-                    Util.removeElements(table.standing, name);
-                }
-
-                if (status === 'ready')
-                    table.ready.push(name);
-
-                if (status === 'unready')
-                    Util.removeElements(table.ready, name);
-            }
-            return tables;
-        }, item.map(table => new Table(table)));
+                return tables;
+            }, item.map(table => new Table(table)))
+        // .filter(table => {
+        //     table.service === this.Service?.id
+        // });
     }
+
+    get LargestTable() { return [...this.Tables].sort((a, b) => b.seats.length - a.seats.length).shift()?.seats || []; }
 
     get ServiceStarted() { return !!this.ServiceActivity }
 
@@ -242,6 +250,32 @@ export class ServiceCenterClient<T = any> {
         await this.terminal.answer({ menu: choice!.value });
     }
 
+    async UseNow() {
+        if (this.Service && !this.User!.seat) {
+            if (this.Table && !this.Table.empty) {
+                await this.LeaveTable();
+            }
+            if (!this.Table) {
+                /** Choose the table that : 1) has empty seats , 2) has the least empty seats */
+                const availableTable = this.Tables
+                    .filter(t => t.empty)
+                    .sort((a, b) => a.empty - b.empty)
+                    .shift();
+                if (availableTable) {
+                    await this.JoinTable(availableTable.id);
+                } else {
+                    const seats = this.Service.seats === '*' && 1
+                        || this.Service.seats instanceof Array && Math.min(...this.Service.seats)
+                        || this.Service.seats as number
+                    await this.CreateTable(seats);
+                }
+            }
+            const Table = await Util.waitUntil(() => this.Table!);
+            const seat = 1 + Table.seats.findIndex(occupant => !occupant);
+            await this.Sit(seat);
+        }
+    }
+
     async CreateTable(seats?: number) {
         await this.SelectMenu('Create Table');
         const Service = this.Service;
@@ -269,7 +303,7 @@ export class ServiceCenterClient<T = any> {
         await Util.waitUntil(() => this.Table!.id === id);
     }
 
-    async Sit() {
+    async Sit(seat?: number) {
         await this.SelectMenu('Sit');
         await Util.waitUntil(() => this.terminal.input.seat);
     }

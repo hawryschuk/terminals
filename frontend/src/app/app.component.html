@@ -2,7 +2,7 @@
 
   <h1> Terminal :: Service Center :: Sample </h1>
 
-  <app-table-service [terminal]="terminal" [serviceCenter]="serviceCenter">
+  <app-service-center [terminal]="terminal" [serviceCenter]="serviceCenter">
     <!-- Here we can put the UI interfaces for our services -->
     <div *ngIf="terminal.input.service == 'Brownie Points'"> You Won!!! </div>
 
@@ -17,8 +17,18 @@
         </button>
       </div>
     </div>
-  </app-table-service>
+  </app-service-center>
 
-  <app-terminal [terminal]="terminal"></app-terminal>
+  <div id="terminals">
+    <div class="list">
+      <button (click)="addTerminal()"> + </button>
+      <button *ngFor="let t of terminals; let index=index" [disabled]="this.terminal===terminal" (click)="terminal=t">
+        TTY{{index+1}}
+      </button>
+
+    </div>
+
+    <app-terminal [terminal]="terminal"></app-terminal>
+  </div>
 
 </div>

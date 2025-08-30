@@ -1,0 +1,33 @@
+<div class="container">
+    <div class="messages">
+        <div class="message" *ngFor="let message of messages()">
+            {{ message.time }} : {{ message.from }} : {{ message.message }}
+        </div>
+    </div>
+
+    <div class="users">
+        <table>
+            <thead>
+                <th>Name</th>
+                <th *ngIf="type()=='all'">Service</th>
+                <th *ngIf="type()=='service'">Table</th>
+                <th *ngIf="type()=='table'">Seat</th>
+                <th *ngIf="type()=='table'">Status</th>
+            </thead>
+            <tbody>
+                <tr *ngFor="let user of users()" [attr.data-ready]="user.ready" [attr.data-seat]="user.seat">
+                    <th> {{user.name}} </th>
+                    <th *ngIf="type()=='all'"> {{user.service}} </th>
+                    <th *ngIf="type()=='service'"> {{user.table}} </th>
+                    <th *ngIf="type()=='table'"> {{user.seat}} </th>
+                    <th *ngIf="type()=='table'"> {{user.ready ? 'READY' : ''}} </th>
+                </tr>
+            </tbody>
+        </table>
+
+    </div>
+</div>
+
+<form #form="ngForm" (ngSubmit)="send.emit(message.value); message.value=''; ">
+    <input #message placeholder="message" />
+</form>

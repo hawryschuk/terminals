@@ -1,0 +1,140 @@
+<!-- <div class="container" #container [scrollTop]="scrollTop$|async"> -->
+
+<div id="status" [attr.data-status]="status" style="display: flex; flex-direction: row;">
+    <h3> Status </h3>
+    <span> {{status}} </span>
+</div>
+
+<div id="section-list">
+    <button [disabled]="section()==s.title" *ngFor="let s of sections()" (click)="section.set(s.title)"> {{s.title}}
+    </button>
+</div>
+
+<div id="sections">
+
+    <section id="connect" *ngIf="!connected && !connecting">
+        <h3 #section data-selected=true> Connect</h3>
+        <button class="main" type="button" id="disconnected" (click)="connect()"> Connect </button>
+    </section>
+
+    <section id="name-registration" *ngIf="terminal.prompts.name">
+        <h3 #section> Username</h3>
+        <form class="main" novalidate id="enter-name"
+            (ngSubmit)="terminal.respond(name.value,'name'); $event.preventDefault()">
+            <input #name placeholder="Name">
+        </form>
+    </section>
+
+    <section id="service-selection" *ngIf="terminal.prompts.service?.[0] as prompt">
+        <h3 #section> Services</h3>
+        <div class="main">
+            <button *ngFor="let choice of prompt.choices" (click)="terminal.respond(choice.value, 'service')">
+                {{choice.title}}
+            </button>
+        </div>
+    </section>
+
+    <section id="lobby" *ngIf="menu.includes('Message Everyone')">
+        <h3 #section> Lobby</h3>
+        <app-chat (send)="client.Message.Everyone($event)" [messages]="client.Messages!.Everyone" type="all"
+            [users]="client.Users.Online"></app-chat>
+    </section>
+
+    <section id="service-lounge" *ngIf="client.Service">
+        <h3 #section> Tables</h3>
+        <section class="main">
+            <button [disabled]="!!client.User?.seat || !menu.includes('Create Table')" (click)="client.UseNow()"> Use Now </button>
+
+            <div id="create-table">
+                <button *ngIf="menu.includes('Create Table')" (click)="client.CreateTable()"> Create Table </button>
+                <div *ngIf="terminal.prompts.seats?.[0] as seats">
+                    <ng-container *ngIf="seats.type=='number'">
+                        <form #form="ngForm" (ngSubmit)="terminal.respond(form.value.seats,'seats')">
+                            <input ngModel name="seats" type="number" min="1" step="1" required placeholder="# Seats">
+                        </form>
+                    </ng-container>
+
+                    <ng-container *ngIf="seats.choices">
+                        <h4> # Seats </h4>
+                        <button *ngFor="let seat of seats.choices" (click)="terminal.respond(seat.value,'seats')">
+                            {{seat.value}}
+                        </button>
+                    </ng-container>
+                </div>
+            </div>
+
+            <table id="service-tables">
+                <thead>
+                    <th> Table </th>
+                    <th class="watch"> </th>
+                    <th class="seat" *ngFor="let seat of client.LargestTable; let index=index">Seat{{index+1}}</th>
+                    <th class="whos-watching"> Who is Watching </th>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let table of client.Tables; let i = index">
+                        <td> #{{i+1}} </td>
+                        <td> <button> Watch </button> </td>
+                        <td *ngFor="let seat of client.LargestTable; let index = index" class="seat">
+                            <ng-container *ngIf="table.seats.length >= index+1 ">
+
+                                <button [disabled]="!!client.User!.seat" class="join" type="button"
+                                    *ngIf="!table.seats[index] && !(client.User!.table==table.id && client.User!.seat==index+1)"
+                                    (click)="client.Sit(index+1)">
+                                    JOIN
+                                </button>
+
+                                <button *ngIf="client.User!.table==table.id && client.User!.seat==index+1">
+                                    STAND
+                                </button>
+
+                                <span *ngIf="table.seats[index] as user">
+                                    {{user}}
+                                </span>
+                            </ng-container>
+                        </td>
+                        <td class="whos-watching">
+                            {{ table.standing.join(', ') }}
+                        </td>
+                    </tr>
+                </tbody>
+                <tfoot></tfoot>
+            </table>
+        </section>
+
+        <app-chat *ngIf="menu.includes('Message Lounge')" (send)="client.Message.Lounge($event)" type="service"
+            [messages]="client.Messages!.Lounge" [users]="client.Users.Service"></app-chat>
+    </section>
+
+    <section id="table-service" *ngIf="terminal.input.table">
+        <h3 #section> Table</h3>
+
+        <section class="main">
+
+            <div *ngIf="menu">
+                <button [disabled]="!menu.includes('Stand')" (click)="client.Stand()"> Stand </button>
+                <button [disabled]="!menu.includes('Ready')" (click)="client.Ready()"> Ready </button>
+                <button [disabled]="!menu.includes('Leave Table')" (click)="client.LeaveTable()"> Leave Table </button>
+            </div>
+
+            <ol id="seats">
+                <li *ngFor="let name of client.Table!.seats; let index=index"
+                    [attr.data-ready]="client.Table!.ready.includes(name!)" [attr.data-empty]="!name">
+
+                    <span class="index">{{ index +1 }}</span>
+                    <span class="name" *ngIf="name"> {{ name }} </span>
+                    <button *ngIf="menu.includes('Sit')" (click)="client.Sit()"> Sit </button>
+                    <button *ngIf="  menu.includes('Stand') && client.User!.seat==(index+1)" (click)="client.Stand()">
+                        Stand </button>
+                </li>
+            </ol>
+
+            <div id="instance-container">
+                <ng-content></ng-content>
+            </div>
+        </section>
+
+        <app-chat (send)="client.Message.Table($event)" [users]="client.Users.Table" type="table"
+            [messages]="client.Messages.Table"></app-chat>
+
+    </section>
+</div>

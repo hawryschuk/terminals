@@ -1,0 +1,101 @@
+// .container {
+//     height: 100%;
+//     overflow: auto;
+
+//     #service-center-related {
+//         display: flex;
+//         flex-direction: row;
+
+//         #seats {
+//             & [data-ready=false] {
+//                 color: yellow;
+//             }
+
+//             & [data-empty=true] {
+//                 color: red;
+//             }
+
+//             & [data-ready=true] {
+//                 color: green;
+//             }
+//         }
+
+//     }
+// }
+
+:host {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100%;
+}
+
+#section-list button {
+    min-width: 100px;
+
+    &[disabled] {
+        font-weight: bold;
+        font-size: larger;
+        color: black;
+        background-color: white;
+    }
+}
+
+#sections {
+    flex: 1;
+
+    &>section {
+        height: 100%;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+
+        &:not(:has(h3[data-selected=true])) {
+            display: none;
+        }
+
+        &>h3 {
+            display: none;
+        }
+
+
+        .main {
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid red;
+
+            #service-tables {
+                width: 100%;
+                height: 100%;
+                border: 1px solid green;
+                overflow: auto;
+
+                td,
+                th {
+                    border: 1px solid brown
+                }
+
+                tbody {
+                    overflow-y: auto;
+
+                    td.whos-watching {
+                        width: 100%;
+                        border: 1px solid yellow;
+                    }
+
+                }
+
+                tfoot {
+                    height: 100%; // or use min-height/max-height as needed
+                    background: #f8f8f8;
+                    border: 1px solid orange;
+                }
+            }
+        }
+
+        app-chat {
+            flex: 1;
+        }
+    }
+}

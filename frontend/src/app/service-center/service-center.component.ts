@@ -1,28 +1,47 @@
-import { ChangeDetectorRef, Component, ElementRef, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { AfterViewChecked, ChangeDetectorRef, Component, computed, ContentChildren, effect, ElementRef, Input, OnDestroy, OnInit, QueryList, signal, ViewChild, ViewChildren } from '@angular/core';
 import { Util } from '@hawryschuk-common/util';
 import { ServiceCenter, ServiceCenterClient, Terminal } from '@hawryschuk-terminal-restapi';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BehaviorSubject } from 'rxjs';
+import { SectionComponent } from '../section/section.component';
+import { ChatComponent } from '../chat/chat.component';
 
 @Component({
-  selector: 'app-table-service',
-  templateUrl: './table-service.component.html',
-  styleUrls: ['./table-service.component.scss'],
+  selector: 'app-service-center',
+  templateUrl: './service-center.component.html',
+  styleUrls: ['./service-center.component.scss'],
   standalone: true,
-  imports: [CommonModule, FormsModule]
+  imports: [CommonModule, FormsModule, ChatComponent]
 })
-export class TableServiceComponent implements OnInit, OnDestroy {
+export class ServiceCenterComponent implements OnInit, OnDestroy {
   constructor(public cd: ChangeDetectorRef) {
     (window as any).tableService = this;
+    effect(() => localStorage.section = this.section());
+    effect(() => this.sections().forEach(({ node, title }) => node.setAttribute('data-selected', `${this.section() === title}`)));
+    effect(() => this.section.set(this.sections().at(-1)?.title), { allowSignalWrites: true });
+    effect(() => {
+      if (
+        this.sections()[0]
+        && !Util.findWhere(this.sections(), { title: this.section() })
+      )
+        this.section.set(this.sections().at(-1)?.title);
+    }, { allowSignalWrites: true });
   }
 
   @Input({ required: true }) terminal!: Terminal;
   @ViewChild('container') private container!: ElementRef;
   scrollTop$ = new BehaviorSubject<number>(0);
 
+  sections = signal<{ node: HTMLHeadingElement; title: string; }[]>([]);
+  section = signal(localStorage.section);
+  @ViewChildren('section') set sectionHeaders(refs: QueryList<ElementRef<HTMLHeadingElement>>) {
+    this.sections.set(refs.map(({ nativeElement: node }) => ({ node, title: node.innerText })));
+  }
+
+  ngOnDestroy = (): void => { }
   async ngOnInit() {
-    // this.connect(0); //    this.terminal.answer({ name: 'joe', service: 'Guessing Game', menu: ['Create Table', 'Sit', 'Ready'], seats: 1, guess: 1 });
+    Object.assign(window, { serviceCenterComponent: this });
 
     /** Ubsubcribes from the terminal when the Component is destroyed */
     this.ngOnDestroy = this
@@ -39,9 +58,7 @@ export class TableServiceComponent implements OnInit, OnDestroy {
 
   get client() { return ServiceCenterClient.getInstance(this.terminal); }
 
-  get menu() { return this.client.Menu?.choices?.filter(c => !c.disabled).map(c => c.value); }
-
-  ngOnDestroy = (): void => { }
+  get menu() { return this.client.Menu?.choices?.filter(c => !c.disabled).map(c => c.value) || []; }
 
   get status() {
     return this.connecting && 'connecting'
@@ -57,10 +74,8 @@ export class TableServiceComponent implements OnInit, OnDestroy {
 
   //#region Offline Mode
   @Input({ required: false }) serviceCenter?: ServiceCenter;
-  private _connected = false;
   private _connecting = false;
-  set connected(c: boolean) { this._connected = true; }
-  get connected() { return !this.serviceCenter || this._connected; }
+  get connected() { return !this.serviceCenter || this.serviceCenter.terminals.includes(this.terminal); }
   get connecting() { return !this.connected && this._connecting; }
   set connecting(c: boolean) { this._connecting = c; }
 
@@ -69,9 +84,7 @@ export class TableServiceComponent implements OnInit, OnDestroy {
       this.connecting = true;
       await Util.pause(delay);
       this.serviceCenter!.join(this.terminal);
-      this.connected = true;
     }
-    this.connected = true;
     //#endregion
   }
 }

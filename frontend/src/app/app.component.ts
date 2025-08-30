@@ -2,22 +2,25 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { Terminal, ServiceCenter, TestingServices, ServiceCenterClient } from '@hawryschuk-terminal-restapi';
 import { TerminalComponent } from '../terminal/terminal.component';
-import { TableServiceComponent } from 'src/table-service/table-service.component';
+import { ServiceCenterComponent } from 'src/app/service-center/service-center.component';
 import { Util } from '@hawryschuk-common/util';
 import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, TerminalComponent, TableServiceComponent, FormsModule],
+  imports: [CommonModule, TerminalComponent, ServiceCenterComponent, FormsModule],
   providers: [],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
 export class AppComponent implements OnInit {
   terminal = new Terminal;
-  client = ServiceCenterClient.getInstance(this.terminal);
+  get client() { return ServiceCenterClient.getInstance(this.terminal); }
   serviceCenter = new ServiceCenter().register(TestingServices.BrowniePoints, TestingServices.GuessingGame);
+  terminals = [this.terminal];
+
+  addTerminal() { this.terminals.push(this.terminal = new Terminal); }
 
   guesses?: number[];
   ngOnInit() {
