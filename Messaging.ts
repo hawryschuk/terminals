@@ -50,7 +50,13 @@ export namespace Messaging {
     export namespace Service {
         export type List = {
             type: 'services',
-            services: Array<{ id: string; name: string; seats: typeof BaseService.USERS }>;
+            services: Array<{
+                id: string;
+                name: string;
+                seats: typeof BaseService.USERS;
+                ALL_SERVICE_MESSAGES_BROADCASTED: boolean;
+                CAN_RECONSTRUCT_STATE_FROM_SERVICE_MESSAGES: boolean;
+            }>;
         };
 
         export type Start = {
@@ -58,6 +64,7 @@ export namespace Messaging {
             service: string;
             id: string;
             table: string;
+            users: string[];
         };
 
         export type End = {

@@ -21,6 +21,8 @@ export class ServiceCenterClient<T = any> {
         return ServiceCenterClient.getInstance(terminal!);
     }
 
+    /** Multiton pattern : Once Client instance for every Terminal
+     * CachedWrapper : So getters() are executed once and cached */
     private static instances = new WeakMap<Terminal, ServiceCenterClient>;
     static getInstance<T = any>(terminal: Terminal): ServiceCenterClient<T> {
         return this.instances.get(terminal) || (() => {
@@ -36,15 +38,33 @@ export class ServiceCenterClient<T = any> {
     constructor(public terminal: Terminal) { }
 
     get NameInUse() { return this.terminal.prompts.name && !this.terminal.input.Name && this.terminal.history.some(i => i.message?.type === 'name-in-use'); }
+
     get Services() {
         const services = (this.terminal.history as TerminalActivity<Messaging.Service.List>[]).find(m => m.message?.type === 'services')?.message?.services;
         return services;
     }
-    get Service() { const { service } = this.terminal.input; return Util.findWhere(this.Services || [], { name: service }); }
+
+    get Service() {
+        const client = this;
+        const { service: name } = this.terminal.input;
+        const service = Util.findWhere(this.Services || [], { name });
+        const Service = new class {
+            get Instance() { return client.ServiceInstance }
+            get Won() { return client.Won }
+            get Lost() { return client.Lost }
+        }
+        return service
+            ? Object.assign(Service, service) as typeof Service & typeof service
+            : undefined;
+    }
 
     get Users() {
         const { service, table } = this.terminal.input;
-        const users = this.terminal.history.filter(i => i.message?.type === 'users').map(item => item.message as Messaging.User.List).pop()?.users || [];
+        const users = this.terminal
+            .history
+            .filter(i => i.message?.type === 'users')
+            .map(item => item.message as Messaging.User.List)
+            .pop()?.users || [];
         const messages = this.terminal
             .history
             .filter(m => m.type === 'stdout' && m.message?.type === 'user-status')
@@ -132,6 +152,8 @@ export class ServiceCenterClient<T = any> {
             standing!: string[];
             ready!: string[];
             service!: string;
+            get full() { return !this.empty }
+            get started() { return this.ready.length === this.seats.length; }
             get empty() { return this.seats.length - this.sitting.length; }
             get users() { return [...this.sitting, ...this.standing]; }
             get sitting() { return this.seats.filter(Boolean) as string[]; }
@@ -201,10 +223,14 @@ export class ServiceCenterClient<T = any> {
 
     get LargestTable() { return [...this.Tables].sort((a, b) => b.seats.length - a.seats.length).shift()?.seats || []; }
 
-    get ServiceStarted() { return !!this.ServiceActivity }
+    get ServiceStarted() {
+        return !this.ServiceEnded
+            && this.ServiceActivity[0]?.message as Messaging.Service.Start
+            || undefined
+    }
 
     get ServiceEnded(): Messaging.Service.End['results'] | undefined {
-        const last = this.ServiceActivity?.pop();
+        const last = this.ServiceActivity?.slice(-1)?.[0];
         return last?.message?.type === 'end-service'
             && last.message.results
             || undefined;
@@ -213,7 +239,12 @@ export class ServiceCenterClient<T = any> {
     get Won() { return this.ServiceEnded?.winners.includes(this.terminal.input.Name); }
     get Lost() { return this.ServiceEnded?.losers.includes(this.terminal.input.Name); }
 
-    /** Service Terminal-Activity pertaining to the active Table */
+    /** Service Terminal-Activity :
+     * - last service thet started
+     * - pertaining to the active Table
+     * - invalid unless :
+     * - A) all service messages are broadcasted 
+     * - B) user is using the service */
     get ServiceActivity() {
         const { terminal } = this;
         const lastTableActivity = terminal.history.filter(h => h.type === 'prompt' && h.options!.name === 'table').pop();
@@ -233,6 +264,23 @@ export class ServiceCenterClient<T = any> {
 
     get ServiceInstanceId() { return this.ServiceActivity?.[0].message?.id }
 
+    get ServiceInstance() {
+        const { ServiceActivity } = this;
+        const messages = ServiceActivity.map(m => m.message!);
+        const first = messages[0] as Messaging.Service.Start;
+        const last = messages.slice(-1)[0] as Messaging.Service.End;
+        const started = first?.type === 'start-service' ? first : undefined;
+        const finished = last?.type === 'end-service' ? last : undefined;
+        if (started) {
+            return {
+                ...Util.pick(started, ['id', 'service', 'table', 'users']),
+                finished,
+                messages: (Util.without(messages, [started, finished]) as Messaging.Service.Message<T>[]).map(m => m.message!)
+            }
+        } else
+            return undefined;
+    }
+
     get ServiceMessages(): T[] { return this.ServiceActivity?.filter(i => i.message!.type === 'service-message').map(i => (i.message as Messaging.Service.Message).message) || [] }
 
     get Results() { return Util.waitUntil(() => this.ServiceEnded!); }
@@ -251,28 +299,32 @@ export class ServiceCenterClient<T = any> {
     }
 
     async UseNow() {
-        if (this.Service && !this.User!.seat) {
-            if (this.Table && !this.Table.empty) {
-                await this.LeaveTable();
-            }
-            if (!this.Table) {
-                /** Choose the table that : 1) has empty seats , 2) has the least empty seats */
-                const availableTable = this.Tables
-                    .filter(t => t.empty)
-                    .sort((a, b) => a.empty - b.empty)
-                    .shift();
-                if (availableTable) {
-                    await this.JoinTable(availableTable.id);
-                } else {
-                    const seats = this.Service.seats === '*' && 1
-                        || this.Service.seats instanceof Array && Math.min(...this.Service.seats)
-                        || this.Service.seats as number
-                    await this.CreateTable(seats);
+        if (this.Service && this.User) {
+            if (!this.User!.seat) {
+                if (this.Table && !this.Table.empty) {
+                    await this.LeaveTable();
                 }
+                if (!this.Table) {
+                    /** Choose the table that : 1) has empty seats , 2) has the least empty seats */
+                    const availableTable = this.Tables
+                        .filter(t => t.empty)
+                        .sort((a, b) => a.empty - b.empty)
+                        .shift();
+                    if (availableTable) {
+                        await this.JoinTable(availableTable.id);
+                    } else {
+                        const seats = this.Service.seats === '*' && 1
+                            || this.Service.seats instanceof Array && Math.min(...this.Service.seats)
+                            || this.Service.seats as number
+                        await this.CreateTable(seats);
+                    }
+                }
+                const Table = await Util.waitUntil(() => this.Table!);
+                const seat = 1 + Table.seats.findIndex(occupant => !occupant);
+                await this.Sit(seat);
             }
-            const Table = await Util.waitUntil(() => this.Table!);
-            const seat = 1 + Table.seats.findIndex(occupant => !occupant);
-            await this.Sit(seat);
+            if (!this.User.ready)
+                await this.Ready();
         }
     }
 

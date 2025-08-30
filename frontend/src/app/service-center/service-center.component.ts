@@ -1,10 +1,9 @@
-import { AfterViewChecked, ChangeDetectorRef, Component, computed, ContentChildren, effect, ElementRef, Input, OnDestroy, OnInit, QueryList, signal, ViewChild, ViewChildren } from '@angular/core';
+import { ChangeDetectorRef, Component, effect, ElementRef, Input, OnDestroy, OnInit, QueryList, signal, ViewChild, ViewChildren } from '@angular/core';
 import { Util } from '@hawryschuk-common/util';
 import { ServiceCenter, ServiceCenterClient, Terminal } from '@hawryschuk-terminal-restapi';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BehaviorSubject } from 'rxjs';
-import { SectionComponent } from '../section/section.component';
 import { ChatComponent } from '../chat/chat.component';
 
 @Component({
@@ -67,7 +66,7 @@ export class ServiceCenterComponent implements OnInit, OnDestroy {
       || !this.terminal.input.service && 'service-selection'
       || !this.terminal.input.table && 'table-selection'
       || !this.terminal.input.seat && 'observing-table'
-      || !this.terminal.input.ready && 'unready'
+      || !this.terminal.input.ready && (this.client.ServiceEnded ? 'service-finished' : 'unready')
       || !this.client.ServiceStarted && 'waiting-for-players'
       || 'service-in-progress'
   }

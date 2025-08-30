@@ -43,7 +43,8 @@
     <section id="service-lounge" *ngIf="client.Service">
         <h3 #section> Tables</h3>
         <section class="main">
-            <button [disabled]="!!client.User?.seat || !menu.includes('Create Table')" (click)="client.UseNow()"> Use Now </button>
+            <button [disabled]="!!client.User?.seat || !menu.includes('Create Table')" (click)="client.UseNow()"> Use
+                Now </button>
 
             <div id="create-table">
                 <button *ngIf="menu.includes('Create Table')" (click)="client.CreateTable()"> Create Table </button>
@@ -73,7 +74,7 @@
                 <tbody>
                     <tr *ngFor="let table of client.Tables; let i = index">
                         <td> #{{i+1}} </td>
-                        <td> <button> Watch </button> </td>
+                        <td> <button type="button" (click)="client.JoinTable(table.id)"> Watch </button> </td>
                         <td *ngFor="let seat of client.LargestTable; let index = index" class="seat">
                             <ng-container *ngIf="table.seats.length >= index+1 ">
 
@@ -128,8 +129,12 @@
                 </li>
             </ol>
 
-            <div id="instance-container">
+            <div id="instance-container" *ngIf="client.Service?.Instance">
                 <ng-content></ng-content>
+            </div>
+
+            <div id="instance-running" *ngIf="!client.Service?.Instance && client.Table?.started">
+                <ng-content select=".joined-mid-session"></ng-content>                
             </div>
         </section>
 

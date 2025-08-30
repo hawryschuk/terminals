@@ -8,6 +8,8 @@ export abstract class BaseService {
     static USERS: number | number[] | '*';
     static NAME: string;
     static RESERVED_PROMPT_VARS = ['name', 'Name', 'service', 'menu', 'table', 'seat', 'message'] as const;
+    static ALL_SERVICE_MESSAGES_BROADCASTED = false;
+    static CAN_RECONSTRUCT_STATE_FROM_SERVICE_MESSAGES = false;
 
     get service() { return (this.constructor as typeof BaseService).NAME; }
 

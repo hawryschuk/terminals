@@ -36,7 +36,8 @@ export class ServiceCenter {
             type: 'services',
             services: Object
                 .entries(this.registry)
-                .map(([id, { NAME: name, USERS: seats }]) => ({ id, name, seats }))
+                .map(([id, { NAME: name, USERS: seats, ALL_SERVICE_MESSAGES_BROADCASTED, CAN_RECONSTRUCT_STATE_FROM_SERVICE_MESSAGES }]) =>
+                    ({ id, name, seats, ALL_SERVICE_MESSAGES_BROADCASTED, CAN_RECONSTRUCT_STATE_FROM_SERVICE_MESSAGES }))
         });
 
         /** The initial user list -- afterwards the client will augment on each incremental event */
@@ -219,6 +220,7 @@ export class ServiceCenter {
                                             id,
                                             table: table!.id,
                                             service: service.NAME,
+                                            users: table!.sitting.map(t => t.input.Name)
                                         });
                                         table!
                                             .start(id)

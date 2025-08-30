@@ -181,7 +181,9 @@ export class Terminal extends Model {
         const result: Promise<T> = Util
             .waitUntil(
                 async () => {
-                    if (this.finished) throw new Error('finished');
+                    if (this.finished) {
+                        throw new Error('finished');
+                    }
                     return 'resolved' in (this.history[index]?.options || {});
                 },
                 { pause: 3 }
