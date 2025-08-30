@@ -1,17 +1,14 @@
-.container {
+:host {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 20px);
-    width: calc(100vw - 20px);
+    height: calc(100vh - 50px);
+    width: 100%;
+}
 
-    app-table-service {
-        height: 30vh;
-        flex: 1;
-    }
+app-service-center {
+    flex: 1;
+}
 
-    app-terminal {
-        flex: 1;
-        height: 30vh;
-        margin-top: auto;
-    }
+app-terminals {
+    height: 400px;
 }

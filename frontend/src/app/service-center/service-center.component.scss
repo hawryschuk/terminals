@@ -1,32 +1,7 @@
-// .container {
-//     height: 100%;
-//     overflow: auto;
-
-//     #service-center-related {
-//         display: flex;
-//         flex-direction: row;
-
-//         #seats {
-//             & [data-ready=false] {
-//                 color: yellow;
-//             }
-
-//             & [data-empty=true] {
-//                 color: red;
-//             }
-
-//             & [data-ready=true] {
-//                 color: green;
-//             }
-//         }
-
-//     }
-// }
-
 :host {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    height: 100%;
     width: 100%;
 }
 
@@ -98,4 +73,8 @@
             flex: 1;
         }
     }
+}
+
+app-terminals {
+    height: 400px;
 }

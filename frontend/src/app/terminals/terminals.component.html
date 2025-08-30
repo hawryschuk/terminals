@@ -1,0 +1,8 @@
+<div class="list">
+    <button class="add" (click)="addTerminal()"> + </button>
+    <button *ngFor="let t of terminals(); let index=index" [disabled]="terminal()==t" (click)="terminal.set(t)">
+        TTY{{index+1}}
+    </button>
+</div>
+
+<app-terminal [terminal]="terminal()"></app-terminal>

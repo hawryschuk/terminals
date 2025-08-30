@@ -23,16 +23,12 @@ export class TerminalComponent implements OnInit {
     const inputs = Array.from(document.querySelectorAll('.prompt input:not([disabled])')) as HTMLInputElement[];
     const active = inputs.find(input => input === document.activeElement);
     const handle = [active, active?.form].includes(event.target as any);
-    console.log('handling event', { event, name, value, active, handle })
     if (event instanceof PointerEvent || handle)
       Util.throttle({
         interval: 500,
         queue: 1,
         resource: 'terminal-respond',
-        block: () => {
-          console.log('sending response', name, value);
-          return this.terminal.respond(value, name);
-        }
+        block: () => { return this.terminal.respond(value, name); }
       });
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -44,15 +40,13 @@ export class TerminalComponent implements OnInit {
   ngOnInit(): void {
     this.terminal.subscribe({
       handler: async () => {
-        this.cd.markForCheck();
-        this.cd.detectChanges();
-        this.scrollTop$.next(this.container.nativeElement.scrollHeight);
+        await Util.pause(150); // prevents the form from updating immediately , having an input selected/activeElement , and having an event from another form affect this one
         if (document.querySelector('.prompt input')) {
-          await Util.pause(150); // prevents the form from updating immediately , having an input selected/activeElement , and having an event from another form affect this one
           const input = await Util.waitUntil(() => document.querySelector('.prompt input:not([disabled])')! as HTMLInputElement);
           input.focus();
           input.checked = true;
         }
+        this.scrollTop$.next(this.container.nativeElement.scrollHeight);
       }
     });
   }

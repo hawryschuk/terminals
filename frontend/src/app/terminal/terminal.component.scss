@@ -1,35 +1,36 @@
-// :host {
-//     display: flex;
-//     flex-direction: column;
-//     width: calc(100vw - 20px);
-// }
+:host {
+    height: 100%;
+}
 
-section.middle {
-    flex: 1;
+.container {
     height: 100%;
     overflow: auto;
     display: flex;
     flex-direction: column;
+    font-family: 'consolas', 'Courier New', Courier, monospace;
+    white-space: pre-wrap;
+    word-wrap: break-word;
 
     &,
     input {
-        font-family: 'consolas', 'Courier New', Courier, monospace;
-        font-size: 12pt;
-        background-color: black;
         color: white;
-        outline: none;
+        background-color: black;
         border: 0;
     }
 
     #stdout {
-        white-space: pre-wrap;
-        word-wrap: break-word;
+        flex: 1;
     }
 
     #prompts {
         margin-top: auto;
 
         .prompt {
+
+            input {
+                font-size: larger;
+                outline: none;
+            }
 
             .message {
                 float: left;
@@ -66,6 +67,4 @@ section.middle {
             }
         }
     }
-
-
 }

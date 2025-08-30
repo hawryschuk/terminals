@@ -1,34 +1,20 @@
-<div class="container">
+<h1> Terminal :: Service Center :: Sample </h1>
 
-  <h1> Terminal :: Service Center :: Sample </h1>
+<app-service-center [(terminals)]="terminals" [(terminal)]="terminal" [serviceCenter]="serviceCenter">
 
-  <app-service-center [terminal]="terminal" [serviceCenter]="serviceCenter">
-    <!-- Here we can put the UI interfaces for our services -->
-    <div *ngIf="terminal.input.service == 'Brownie Points'"> You Won!!! </div>
+  <div *ngIf="terminal.input.service == 'Brownie Points'"> You Won!!! </div>
 
-    <div *ngIf="terminal.input.service == 'Guessing Game'">
-      <h3> !! Guessing Game !! </h3>
-      <div class="won" *ngIf="client.Won"> You won! Omg! </div>
-      <div class="lost" *ngIf="client.Lost"> You lost! Omg! </div>
-      <div *ngIf="terminal.prompts.guess?.[0] as prompt">
-        <h3> Guess the random number </h3>
-        <button *ngFor="let guess of guesses" (click)="terminal.respond(guess,'guess')">
-          {{guess}}
-        </button>
-      </div>
-    </div>
-  </app-service-center>
-
-  <div id="terminals">
-    <div class="list">
-      <button (click)="addTerminal()"> + </button>
-      <button *ngFor="let t of terminals; let index=index" [disabled]="this.terminal===terminal" (click)="terminal=t">
-        TTY{{index+1}}
+  <div *ngIf="terminal.input.service == 'Guessing Game'">
+    <h3> !! Guessing Game !! </h3>
+    <div class="won" *ngIf="client.Won"> You won! Omg! </div>
+    <div class="lost" *ngIf="client.Lost"> You lost! Omg! </div>
+    <div *ngIf="terminal.prompts.guess?.[0] as prompt">
+      <h3> Guess the random number </h3>
+      <button *ngFor="let i of [].constructor(prompt.max!-prompt.min!+1); let index = index"
+        (click)="terminal.respond(index+prompt.min!,'guess')">
+        {{index+prompt.min!}}
       </button>
-
     </div>
-
-    <app-terminal [terminal]="terminal"></app-terminal>
   </div>
 
-</div>
+</app-service-center>

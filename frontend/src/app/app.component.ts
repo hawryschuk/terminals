@@ -1,37 +1,22 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { Terminal, ServiceCenter, TestingServices, ServiceCenterClient } from '@hawryschuk-terminal-restapi';
-import { TerminalComponent } from '../terminal/terminal.component';
 import { ServiceCenterComponent } from 'src/app/service-center/service-center.component';
-import { Util } from '@hawryschuk-common/util';
-import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, TerminalComponent, ServiceCenterComponent, FormsModule],
+  imports: [CommonModule, ServiceCenterComponent],
   providers: [],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
-export class AppComponent implements OnInit {
+export class AppComponent {
   terminal = new Terminal;
-  get client() { return ServiceCenterClient.getInstance(this.terminal); }
-  serviceCenter = new ServiceCenter().register(TestingServices.BrowniePoints, TestingServices.GuessingGame);
   terminals = [this.terminal];
-
-  addTerminal() { this.terminals.push(this.terminal = new Terminal); }
-
-  guesses?: number[];
-  ngOnInit() {
-    Object.assign(window, this);
+  serviceCenter = new ServiceCenter().register(TestingServices.BrowniePoints, TestingServices.GuessingGame);
+  get client() { return ServiceCenterClient.getInstance(this.terminal); }
+  constructor() {
     // this.terminal.answer({ name: 'joe', service: 'Guessing Game', menu: ['Create Table', 'Sit', 'Ready'], seats: 1, guess: 1 });
-    this.terminal.subscribe({
-      handler: () => {
-        this.guesses = this.terminal.prompts.guess
-          ? Util.range(this.terminal.prompts.guess[0].min!, this.terminal.prompts.guess[0].max!)
-          : undefined;
-      }
-    });
   }
 }

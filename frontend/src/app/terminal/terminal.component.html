@@ -1,4 +1,4 @@
-<section class="middle" #container [scrollTop]="scrollTop$|async">
+<section class="container" #container [scrollTop]="scrollTop$|async">
     <code id="stdout" [ngClass]="{empty:!terminal.buffer}">
         {{terminal.buffer}}
     </code>
