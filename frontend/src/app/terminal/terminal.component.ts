@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, ElementRef, Input, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, effect, ElementRef, input, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Util } from '@hawryschuk-common/util';
 import { BehaviorSubject } from 'rxjs';
 import { Terminal } from '@hawryschuk-terminal-restapi';
@@ -12,12 +12,21 @@ import { FormsModule } from '@angular/forms';
   standalone: true,
   imports: [CommonModule, FormsModule]
 })
-export class TerminalComponent implements OnInit {
+export class TerminalComponent implements OnDestroy {
   @ViewChild('container') private container!: ElementRef;
-  @Input() terminal!: Terminal;
-  Number = Number;
+  terminal = input.required<Terminal>();
+  terminalSubscriptions = new Map<Terminal, { unsubscribe: Function }>;
+  ngOnDestroy = () => [...this.terminalSubscriptions.values()].forEach(s => s.unsubscribe());
 
-  constructor(public cd: ChangeDetectorRef) { }
+  constructor(public cd: ChangeDetectorRef) {
+    effect(() => {
+      this.onTerminalUpdated();
+      if (this.terminal() && !this.terminalSubscriptions.has(this.terminal()))
+        this.terminalSubscriptions.set(this.terminal(), this.terminal().subscribe({ handler: () => this.onTerminalUpdated() }));
+    });
+  }
+
+  Number = Number;
 
   respond(event: Event, name: string, value: any) {
     const inputs = Array.from(document.querySelectorAll('.prompt input:not([disabled])')) as HTMLInputElement[];
@@ -28,32 +37,23 @@ export class TerminalComponent implements OnInit {
         interval: 500,
         queue: 1,
         resource: 'terminal-respond',
-        block: () => { return this.terminal.respond(value, name); }
+        block: () => { return this.terminal().respond(value, name); }
       });
     event.preventDefault();
     event.stopImmediatePropagation();
     event.stopPropagation();
   }
 
-  scrollTop$ = new BehaviorSubject<number>(0);
-
-  ngOnInit(): void {
-    this.terminal.subscribe({
-      handler: async () => {
-        await Util.pause(150); // prevents the form from updating immediately , having an input selected/activeElement , and having an event from another form affect this one
-        if (document.querySelector('.prompt input')) {
-          const input = await Util.waitUntil(() => document.querySelector('.prompt input:not([disabled])')! as HTMLInputElement);
-          input.focus();
-          input.checked = true;
-        }
-        this.scrollTop$.next(this.container.nativeElement.scrollHeight);
-      }
-    });
-  }
-
-  get promptMessage() {
-    const { message } = this.terminal.prompted!;
-    return typeof message == 'string' ? message : JSON.stringify(this.terminal.prompted)
+  async onTerminalUpdated() {
+    this.cd.markForCheck();
+    this.cd.detectChanges();
+    await Util.pause(5); // prevents the form from updating immediately , having an input selected/activeElement , and having an event from another form affect this one
+    if (document.querySelector('.prompt input')) {
+      const input = await Util.waitUntil(() => document.querySelector('.prompt input:not([disabled])')! as HTMLInputElement);
+      input.focus();
+      input.checked = true;
+    }
+    this.container.nativeElement.scrollTop = this.container.nativeElement.scrollHeight;
   }
 
 }

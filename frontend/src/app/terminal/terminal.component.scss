@@ -15,7 +15,6 @@
     input {
         color: white;
         background-color: black;
-        border: 0;
     }
 
     #stdout {
@@ -26,44 +25,57 @@
         margin-top: auto;
 
         .prompt {
+            display: flex;
+            flex-direction: row;
 
-            input {
-                font-size: larger;
-                outline: none;
-            }
-
-            .message {
-                float: left;
+            .message span {
                 font-weight: bold;
                 margin-right: 10px;
+                border-bottom: 2px solid white;
             }
 
-            fieldset {
-                border: 0;
-                padding: 0
-            }
+            form {
+                flex: 1;
+                width: 100%;
 
-            fieldset[data-disabled=true] {
-                color: grey;
-            }
+                input[type=text] {
+                    width: calc(100% - 20px)
+                }
 
-            input[type=radio] {
-                opacity: 0%;
-            }
+                fieldset {
+                    border: 0;
+                    padding: 0
+                }
 
-            input[type=radio]:checked+label:before {
-                content: ">";
-            }
+                fieldset[data-disabled=true] {
+                    color: grey;
+                }
 
-            input[type=number] {
-                appearance: textfield;
-                -moz-appearance: textfield;
-                width: 200px;
-            }
+                input {
+                    font-weight: bold;
+                    outline: none;
+                    border: 0;
+                    // border-bottom: 1px dashed grey;
+                }
 
-            input::-webkit-outer-spin-button,
-            input::-webkit-inner-spin-button {
-                -webkit-appearance: none;
+                input[type=radio] {
+                    opacity: 0%;
+                }
+
+                input[type=radio]:checked+label:before {
+                    content: ">";
+                }
+
+                input[type=number] {
+                    appearance: textfield;
+                    -moz-appearance: textfield;
+                    width: 200px;
+                }
+
+                input::-webkit-outer-spin-button,
+                input::-webkit-inner-spin-button {
+                    -webkit-appearance: none;
+                }
             }
         }
     }
