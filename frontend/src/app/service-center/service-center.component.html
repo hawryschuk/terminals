@@ -41,8 +41,9 @@
     <section id="service-lounge" *ngIf="client.Service">
         <h3 #section> Tables</h3>
         <section class="main">
-            <button [disabled]="!!client.User?.seat || !menu.includes('Create Table')" (click)="client.UseNow()"> Use
-                Now </button>
+            <button [disabled]="!!client.User?.seat || !menu.includes('Create Table')" (click)="client.UseNow()">
+                Use Now
+            </button>
 
             <div id="create-table">
                 <button *ngIf="menu.includes('Create Table')" (click)="client.CreateTable()"> Create Table </button>
@@ -110,6 +111,8 @@
         <section class="main">
 
             <div *ngIf="menu">
+                <button [disabled]="!menu.includes('Invite Robot')" (click)="client.InviteRobot()"> Invite Robot
+                </button>
                 <button [disabled]="!menu.includes('Stand')" (click)="client.Stand()"> Stand </button>
                 <button [disabled]="!menu.includes('Ready')" (click)="client.Ready()"> Ready </button>
                 <button [disabled]="!menu.includes('Leave Table')" (click)="client.LeaveTable()"> Leave Table </button>
@@ -121,8 +124,10 @@
 
                     <span class="index">{{ index +1 }}</span>
                     <span class="name" *ngIf="name"> {{ name }} </span>
-                    <button *ngIf="menu.includes('Sit')" (click)="client.Sit()"> Sit </button>
-                    <button *ngIf="  menu.includes('Stand') && client.User!.seat==(index+1)" (click)="client.Stand()">
+                    <button *ngIf="name && menu.includes('Boot Robot') && client.Table!.robots.includes(name!)"
+                        (click)="client.BootRobot(index+1)"> Boot </button>
+                    <button *ngIf="!name && menu.includes('Sit')" (click)="client.Sit()"> Sit </button>
+                    <button *ngIf="menu.includes('Stand') && client.User!.seat==(index+1)" (click)="client.Stand()">
                         Stand </button>
                 </li>
             </ol>

@@ -6,7 +6,7 @@ export namespace Messaging {
         export type Status = {
             type: 'user-status';
             name: string;
-            status: 'online' | 'offline' | 'joined-table' | 'left-table' | 'joined-service' | 'left-service' | 'sat-down' | 'stood-up' | 'created-table' | 'ready' | 'unready' | 'invited-robot';
+            status: 'online' | 'offline' | 'joined-table' | 'left-table' | 'joined-service' | 'left-service' | 'sat-down' | 'stood-up' | 'created-table' | 'ready' | 'unready' | 'invited-robot' | 'boot-robot';
             id?: string;            // service-id , table-id , seat-id , robot-id
 
             seats?: number;
@@ -22,6 +22,7 @@ export namespace Messaging {
                 table?: string;
                 seat?: number;
                 ready?: boolean;
+                robot?: boolean;
             }>;
         };
     }

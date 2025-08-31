@@ -84,6 +84,7 @@ export class ServiceCenterClient<T = any> {
                 if (message.status === 'created-table') users.get(message.name)!.table = message.id;
                 if (message.status === 'ready') users.get(message.name)!.ready = true;
                 if (message.status === 'unready') users.get(message.name)!.ready = false;
+                if (message.status === 'invited-robot') users.get(message.name)!.robot = true;
                 return users;
             },
             users.reduce((all, user) => {
@@ -95,13 +96,12 @@ export class ServiceCenterClient<T = any> {
         return new class Users {
             get Online() { return online }
             get Service() { return Util.where(this.Online, { service }); }
-            get Table() {
-                return Util.where(this.Service, { table });
-            }
+            get Table() { return Util.where(this.Service, { table }); }
             get Sitting() { return this.Table.filter(user => user.seat); }
             get Standing() { return this.Table.filter(user => !user.seat); }
             get Ready() { return this.Table.filter(user => user.ready); }
             get Unready() { return this.Table.filter(user => !user.ready); }
+            get Robots() { return Util.where(this.Online, { robot: true }) }
         }
     }
 
@@ -155,6 +155,7 @@ export class ServiceCenterClient<T = any> {
             id!: string;
             seats!: Array<string | undefined>;
             standing!: string[];
+            robots!: string[];
             ready!: string[];
             service!: string;
             get full() { return !this.empty }
@@ -178,6 +179,7 @@ export class ServiceCenterClient<T = any> {
                             standing: [name],
                             seats: new Array(seats!).fill(undefined),
                             ready: [],
+                            robots: [],
                             service: service!,
                         };
                         tables.push(new Table(table as Table));
@@ -192,6 +194,9 @@ export class ServiceCenterClient<T = any> {
 
                     if (status === 'stood-up')
                         table.standing.push(name);
+
+                    if (status === 'invited-robot')
+                        table.robots.push(id!);
 
                     if (status === 'left-table') {
                         if (table) {
@@ -359,6 +364,9 @@ export class ServiceCenterClient<T = any> {
         await this.SelectMenu('Sit');
         await Util.waitUntil(() => this.terminal.input.seat);
     }
+
+    async BootRobot(seat: number) { await this.SelectMenu('Boot Robot'); }
+    async InviteRobot() { await this.SelectMenu('Invite Robot'); }
 
     async Stand() {
         await this.SelectMenu('Stand');

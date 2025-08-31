@@ -59,6 +59,7 @@ export class ServiceCenter {
             tables: this.tables.map(table => {
                 const standing: string[] = table.standing.map(seat => seat.input.Name);
                 const ready = table.sitting.filter(seat => seat.input.ready).map(seat => seat.input.Name);
+                const robots = table.terminals.filter(terminal => Util.findWhere(this.robots, { terminal })).map(t => t.input.Name);
                 const seats = new Array(table.seats).fill(undefined)
                     .map((val, index) => table.terminals.find(terminal => terminal.input.seat === index + 1)?.input.Name);
                 return {
@@ -67,6 +68,7 @@ export class ServiceCenter {
                     standing,
                     ready,
                     seats,
+                    robots,
                 };
             })
         });
@@ -226,6 +228,20 @@ export class ServiceCenter {
             await terminal.send({ type: 'error', message: 'invalid-service' });
         }
         return service;
+    }
+
+    async BootRobot(terminal: Terminal) {
+        const table = await this.GetTable(terminal);
+        const [robot] = table.sitting.map(terminal => Util.findWhere(this.robots, { terminal })).filter(Boolean);
+        if (robot) {
+            await this.Offline(robot.terminal);
+            await robot.terminal.finish();
+            Util.removeElements(this.robots, robot);
+            return true;
+        } else {
+            await terminal.send({ type: 'error', message: 'no-robots-at-table' });
+            return false;
+        }
     }
 
     async InviteRobot(terminal: Terminal) {
@@ -444,6 +460,11 @@ export class ServiceCenter {
                                 title: 'Invite Robot',
                                 disabled: !table || table.full || !service.ROBOT,
                                 value: async () => { await this.InviteRobot(terminal); }
+                            },
+                            {
+                                title: 'Boot Robot',
+                                disabled: !table || table.running || !table.sitting.some(terminal => Util.findWhere(this.robots, { terminal })),
+                                value: async () => { await this.BootRobot(terminal); }
                             },
                             {
                                 title: 'Ready',
