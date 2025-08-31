@@ -52,7 +52,7 @@ for (const type of ['local', 'remote'])
         });
 
         it('Prompts users for their name', async () => {
-            await terminal.answer({ name: `alex ${type}` });
+            await client.Name(`alex ${type}`);
         });
 
         it('Knows the name of every terminal', async () => {
@@ -155,6 +155,12 @@ for (const type of ['local', 'remote'])
             await client2.SelectMenu('Message Lounge');
             await client2.terminal.answer({ message: 'hello' });
             await Util.waitUntil(() => [client2, client3].every(client => Util.findWhere(client.Messages.Lounge, { message: 'hello' })));
+        });
+
+        it('allows two users to send direct messages to each other', async () => {
+            await client2.Message.Direct({ to: client3.UserName!, message: 'hi' });
+            await Util.waitUntil(() => client2.Messages.Direct);
+            await Util.waitUntil(() => client3.Messages.Direct);
         });
 
         it('expects no errors ', () => {

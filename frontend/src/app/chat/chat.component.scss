@@ -39,6 +39,15 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
+
+        .selected {
+            background-color: #c0c0c0;
+        }
+
+        .name {
+            width: 100%;
+        }
+
     }
 }
 

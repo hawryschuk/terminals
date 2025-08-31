@@ -1,11 +1,24 @@
-import { ChangeDetectorRef, Component, effect, ElementRef, input, Input, model, OnDestroy, OnInit, QueryList, signal, ViewChild, ViewChildren } from '@angular/core';
+import { ChangeDetectorRef, Component, effect, ElementRef, Input, model, OnDestroy, QueryList, Signal, signal, ViewChildren } from '@angular/core';
 import { Util } from '@hawryschuk-common/util';
 import { ServiceCenter, ServiceCenterClient, Terminal } from '@hawryschuk-terminal-restapi';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { BehaviorSubject } from 'rxjs';
 import { ChatComponent } from '../chat/chat.component';
 import { TerminalsComponent } from "../terminals/terminals.component";
+
+export const onTerminalUpdated = ({ component, handler, terminal }: { component: any; handler: Function; terminal: Signal<Terminal>; }) => {
+  const terminalSubscriptions = new Map<Terminal, { unsubscribe: Function }>;
+  effect(() => {
+    handler();
+    if (terminal() && !terminalSubscriptions.has(terminal()))
+      terminalSubscriptions.set(terminal(), terminal().subscribe({ handler: () => handler() }));
+  });
+  const { ngOnDestroy } = component;
+  component.ngOnDestroy = () => {
+    [...terminalSubscriptions.values()].forEach(s => s.unsubscribe());
+    ngOnDestroy?.();
+  }
+};
 
 @Component({
   selector: 'app-service-center',
@@ -14,9 +27,23 @@ import { TerminalsComponent } from "../terminals/terminals.component";
   standalone: true,
   imports: [CommonModule, FormsModule, ChatComponent, TerminalsComponent]
 })
-export class ServiceCenterComponent implements OnDestroy {
+export class ServiceCenterComponent {
+
   constructor(public cd: ChangeDetectorRef) {
     Object.assign(window, { serviceCenterComponent: this });
+
+    /** Auto-select the first user that direct-messages the terminal */
+    onTerminalUpdated({
+      component: this,
+      terminal: this.terminal,
+      handler: () => {
+        const users = Object.keys(this.client.Messages.Direct || {}).sort();
+        const [defaultUser] = users;
+        if (defaultUser && !users.includes(this.selectedUser!)) {
+          this.selectedUser = defaultUser;
+        }
+      }
+    });
     effect(() => localStorage.section = this.section());
     effect(() => this.sections().forEach(({ node, title }) => node.setAttribute('data-selected', `${this.section() === title}`)));
     effect(() => {
@@ -37,7 +64,16 @@ export class ServiceCenterComponent implements OnDestroy {
     this.sections.set(refs.map(({ nativeElement: node }) => ({ node, title: node.innerText })));
   }
 
-  ngOnDestroy = (): void => { }
+  async initiateDirectMessaging(user?: string) {
+    if (user && user !== this.client.UserName) {
+      this.selectedUser = user;
+      if (!Util.findWhere(this.client.Users.DirectMessaged, { name: user }))
+        await this.client.Message.Direct({ to: user, message: ' ' });
+      this.section.set('Direct Messages');
+    }
+  }
+
+  selectedUser?: string;
 
   get client() { return ServiceCenterClient.getInstance(this.terminal()); }
 

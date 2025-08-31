@@ -62,6 +62,7 @@ export class ServiceCenterClient<T = any> {
 
     get Users() {
         const { service, table } = this.terminal.input;
+        const client = this;
         const users = this.terminal
             .history
             .filter(i => i.message?.type === 'users')
@@ -102,6 +103,10 @@ export class ServiceCenterClient<T = any> {
             get Ready() { return this.Table.filter(user => user.ready); }
             get Unready() { return this.Table.filter(user => !user.ready); }
             get Robots() { return Util.where(this.Online, { robot: true }) }
+            get DirectMessaged() {
+                const names = Object.keys(client.Messages.Direct || {});
+                return this.Online.filter(user => names.includes(user.name));
+            }
         }
     }
 
@@ -111,7 +116,7 @@ export class ServiceCenterClient<T = any> {
     get Table() { return Util.findWhere(this.Tables, { id: this.terminal.input.table }); }
 
     get Messages() {
-        const { service, table } = this.terminal.input;
+        const { service, table, Name } = this.terminal.input;
         const messages = this.terminal
             .history
             .filter(m => m.type === 'stdout' && m.message?.type === 'message')
@@ -120,7 +125,15 @@ export class ServiceCenterClient<T = any> {
             get Everyone() { return Util.where(messages, { to: 'everyone' }); }
             get Lounge() { return Util.where(messages, { to: 'lounge', id: service }); }
             get Table() { return Util.where(messages, { to: 'table', id: table }); }
-            get Direct() { return Util.where(messages, { to: 'direct' }); }
+            get Direct() {
+                const direct = Util.where(messages, { to: 'direct' }).reduce((byuser, message) => {
+                    const { from, id } = message;
+                    const name = from === Name ? id : from;
+                    (byuser[name] ||= []).push(message);
+                    return byuser;
+                }, {} as Record<string, typeof messages>);
+                return Object.keys(direct).length ? direct : undefined;
+            }
         }
     }
 
@@ -131,6 +144,10 @@ export class ServiceCenterClient<T = any> {
             async Everyone(message: string) {
                 await client.SelectMenu('Message Everyone');
                 await terminal.answer({ message });
+            }
+            async Direct({ message, to }: { message: string; to: string; }) {
+                await client.SelectMenu('Direct Message');
+                await terminal.answer({ message, to });
             }
             async Table(message: string) {
                 await client.SelectMenu('Message Table');

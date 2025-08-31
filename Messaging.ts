@@ -44,7 +44,7 @@ export namespace Messaging {
         type: 'message';
         from: string;
         to: 'everyone' | 'lounge' | 'direct' | 'table';
-        id: string;
+        id: string; // * | Servce.Name | User.name | Table.id
         message: string;
     };
 

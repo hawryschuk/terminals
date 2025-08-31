@@ -1,7 +1,9 @@
 <div class="container">
     <div class="messages">
-        <div class="message" *ngFor="let message of messages()">
-            {{ message.time }} : {{ message.from }} : {{ message.message }}
+        <div class="message" *ngFor="let message of messages(); let index=index">
+            <ng-container *ngIf="!(index==0 && type()=='direct' && message.message==' ')">
+                {{ message.time }} : {{ message.from }} : {{ message.message }}
+            </ng-container>
         </div>
     </div>
 
@@ -15,7 +17,13 @@
         </thead>
         <tbody>
             <tr *ngFor="let user of users()" [attr.data-ready]="user.ready" [attr.data-seat]="user.seat">
-                <th> {{user.name}} </th>
+                <th>
+                    <button type="button" class="name" [class.selected]="selectedUser()==user.name"
+                        (click)="type()=='direct' && selectedUser.set(user.name)"
+                        (dblclick)="selectedUser.set(user.name)">
+                        {{user.name}}
+                    </button>
+                </th>
                 <th *ngIf="type()=='all'"> {{user.service}} </th>
                 <th *ngIf="type()=='service'"> {{user.table}} </th>
                 <th *ngIf="type()=='table'"> {{user.seat}} </th>

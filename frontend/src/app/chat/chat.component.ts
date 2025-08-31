@@ -1,4 +1,4 @@
-import { Component, computed, input, output, Output } from '@angular/core';
+import { Component, computed, input, model, output, Output } from '@angular/core';
 import { Messaging } from '../../../../Messaging';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -19,6 +19,7 @@ export class ChatComponent {
 
   users = input.required<ServiceCenterClient['Users']['Online']>();
 
-  type = input.required<'table' | 'service' | 'all'>();
+  type = input.required<'table' | 'service' | 'all' | 'direct'>();
 
+  selectedUser = model<string>();
 }

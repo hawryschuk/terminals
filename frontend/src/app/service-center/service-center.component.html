@@ -34,8 +34,9 @@
 
     <section id="lobby" *ngIf="menu.includes('Message Everyone')">
         <h3 #section> Lobby</h3>
-        <app-chat (send)="client.Message.Everyone($event)" [messages]="client.Messages!.Everyone" type="all"
-            [users]="client.Users.Online"></app-chat>
+        <app-chat type="all" [users]="client.Users.Online" (send)="client.Message.Everyone($event)"
+            [selectedUser]="selectedUser" (selectedUserChange)="initiateDirectMessaging($event)"
+            [messages]="client.Messages!.Everyone"></app-chat>
     </section>
 
     <section id="service-lounge" *ngIf="client.Service">
@@ -78,8 +79,7 @@
                                 Watch
                             </button>
 
-                            <button
-                                *ngIf="client.User!.table==table.id && menu.includes('Stand')"
+                            <button *ngIf="client.User!.table==table.id && menu.includes('Stand')"
                                 (click)="client.Stand()">
                                 Stand
                             </button>
@@ -153,8 +153,18 @@
             </div>
         </section>
 
-        <app-chat (send)="client.Message.Table($event)" [users]="client.Users.Table" type="table"
+        <app-chat type="table" [users]="client.Users.Table" (send)="client.Message.Table($event)"
+            [selectedUser]="selectedUser" (selectedUserChange)="initiateDirectMessaging($event)"
             [messages]="client.Messages.Table"></app-chat>
+
+    </section>
+
+    <section id="direct-messages" *ngIf="client.Messages.Direct">
+        <h3 #section>Direct Messages</h3>
+
+        <app-chat [(selectedUser)]="selectedUser" (send)="client.Message.Direct({ to: selectedUser!, message: $event})"
+            [users]="client.Users.DirectMessaged" type="direct"
+            [messages]="selectedUser ? client.Messages.Direct[selectedUser] : []"></app-chat>
 
     </section>
 </div>
