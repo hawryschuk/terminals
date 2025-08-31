@@ -9,8 +9,8 @@ export abstract class ServiceRobot {
     get client() { return ServiceCenterClient.getInstance(this.terminal); }
     abstract handlePrompts(prompts: Record<string, Prompt[]>): Promise<void>;
     protected async run() {
-        await Util.waitUntil(() => this.client.ServiceInstance);
-        while (this.client.ServiceInstance && !this.client.ServiceInstance.finished) {
+        await Util.waitUntil(() => this.client.ServiceInstance || this.terminal.finished);
+        while (this.client.ServiceInstance && !this.client.ServiceInstance.finished && !this.terminal.finished) {
             const { prompts: promptss = {} } = this.terminal;
             delete promptss.menu;
             if (Object.entries(promptss).length)
