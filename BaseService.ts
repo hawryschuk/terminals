@@ -3,6 +3,7 @@ import { Messaging } from "./Messaging";
 import { Table } from "./Table";
 import { Util } from '@hawryschuk-common/util';
 import { Prompt } from "./Prompt";
+import { ServiceRobot } from "./ServiceRobot";
 
 export abstract class BaseService<T = any> {
     static USERS: number | number[] | '*';
@@ -10,6 +11,7 @@ export abstract class BaseService<T = any> {
     static RESERVED_PROMPT_VARS = ['name', 'Name', 'service', 'menu', 'table', 'seat', 'message'] as const;
     static ALL_SERVICE_MESSAGES_BROADCASTED = false;
     static CAN_RECONSTRUCT_STATE_FROM_SERVICE_MESSAGES = false;
+    static ROBOT?: typeof ServiceRobot;
 
     get service() { return (this.constructor as typeof BaseService).NAME; }
 

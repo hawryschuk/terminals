@@ -38,4 +38,16 @@ export class Table<T extends BaseService> {
         delete this.instance;
         return this.result!;
     }
+
+    async broadcast<T = any>(message: T) { await this.send(message) }
+
+    async send<T = any>(message: T, terminals = this.terminals) {
+        const { id, service } = this;
+        return await Promise.all(terminals.map(terminal => terminal.send({
+            type: 'table-message',
+            message,
+            service: service.NAME,
+            id
+        })));
+    }
 }

@@ -12,8 +12,11 @@ import { Table } from "./Table";
 import { BaseService } from "./BaseService";
 import { Messaging } from "./Messaging";
 import { ServiceCenterClient } from "./ServiceCenterClient";
+import { ServiceRobot } from "./ServiceRobot";
 
 export class ServiceCenter {
+
+    robots: Array<ServiceRobot> = [];
 
     tables: Table<BaseService>[] = [];
 
@@ -36,8 +39,8 @@ export class ServiceCenter {
             type: 'services',
             services: Object
                 .entries(this.registry)
-                .map(([id, { NAME: name, USERS: seats, ALL_SERVICE_MESSAGES_BROADCASTED, CAN_RECONSTRUCT_STATE_FROM_SERVICE_MESSAGES }]) =>
-                    ({ id, name, seats, ALL_SERVICE_MESSAGES_BROADCASTED, CAN_RECONSTRUCT_STATE_FROM_SERVICE_MESSAGES }))
+                .map(([id, { NAME: name, USERS: seats, ALL_SERVICE_MESSAGES_BROADCASTED, CAN_RECONSTRUCT_STATE_FROM_SERVICE_MESSAGES, ROBOT }]) =>
+                    ({ id, name, seats, ALL_SERVICE_MESSAGES_BROADCASTED, CAN_RECONSTRUCT_STATE_FROM_SERVICE_MESSAGES, ROBOT: !!ROBOT }))
         });
 
         /** The initial user list -- afterwards the client will augment on each incremental event */
@@ -55,7 +58,7 @@ export class ServiceCenter {
             type: 'tables',
             tables: this.tables.map(table => {
                 const standing: string[] = table.standing.map(seat => seat.input.Name);
-                const ready = table.sitting.map(seat => seat.input.ready);
+                const ready = table.sitting.filter(seat => seat.input.ready).map(seat => seat.input.Name);
                 const seats = new Array(table.seats).fill(undefined)
                     .map((val, index) => table.terminals.find(terminal => terminal.input.seat === index + 1)?.input.Name);
                 return {
@@ -95,6 +98,284 @@ export class ServiceCenter {
         );
     }
 
+    async Sat(terminal: Terminal, seat?: number) {
+        const { table: id } = terminal.input;
+        const table = Util.findWhere(this.tables, { id })!;
+        const seated: number[] = table!.sitting.map(terminal => terminal.input.seat);
+        const unseated = Util.without(Util.range(table!.seats), seated);
+        seat ||= unseated[0];
+        if (unseated.includes(seat)) {
+            await terminal.prompt({ type: "number", name: 'seat', resolved: seat, clobber: true });
+            await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'sat-down', name: terminal.input.Name, seat });
+            return true;
+        } else if (table.full) {
+            await terminal.send({ type: 'error', message: 'table-full' });
+        } else if (seat && unseated.includes(seat)) {
+            await terminal.send({ type: 'error', message: 'seat-taken' });
+        }
+        return false;
+    }
+
+    async LeaveService(terminal: Terminal) {
+        const service = await this.GetService(terminal);
+        if (service) {
+            await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'left-service', name: terminal.input.Name, id: service.NAME });
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    async JoinService(terminal: Terminal, service: string) {
+        await terminal.prompt({ type: 'number', name: 'service', resolved: service });
+        return await this.JoinedService(terminal);
+    }
+
+    async JoinedService(terminal: Terminal) {
+        const service = await this.GetService(terminal);
+        if (service) {
+            await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'joined-service', name: terminal.input.Name, id: service.NAME });
+            return true;
+        } else if (!terminal.input.service) {
+            await terminal.send({ type: 'error', message: 'service-undefined' });
+            debugger;
+        }
+        return false;
+    }
+
+    async GetTables(terminal: Terminal) { return Util.where(this.tables, { service: await this.GetService(terminal) }); }
+
+    async JoinTable(terminal: Terminal, table?: string) {
+        table ||= await (async () => {
+            return await terminal.prompt({
+                type: 'select',
+                name: 'table',
+                clobber: true,
+                choices: (await this.GetTables(terminal)).map((table, index) => {
+                    const { id, sitting: { length: sitting }, standing: { length: standing }, empty, ready, running } = table;
+                    return ({
+                        value: table.id,
+                        title: JSON.stringify({ id, sitting, standing, empty, ready, running, index }),
+                    });
+                })
+            });
+        })();
+
+        await terminal.prompt({ type: 'number', name: 'table', resolved: table });
+        return await this.JoinedTable(terminal);
+    }
+
+    async GetTable(terminal: Terminal) {
+        const { table: id } = terminal.input;
+        return Util.findWhere(this.tables, { id })!;
+    }
+
+    async JoinedTable(terminal: Terminal) {
+        const table = await this.GetTable(terminal);
+        if (table) {
+            if (!table.terminals.includes(terminal)) {
+                table.terminals.push(terminal);
+                await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'joined-table', name: terminal.input.Name, id: table.id });
+                return true;
+            } else {
+                await terminal.send({ type: 'error', message: 'already-at-table' });
+            }
+        } else {
+            await terminal.prompt({ type: 'text', resolved: '', name: 'table' });
+            await terminal.send({ type: 'error', message: 'invalid-table' });
+        }
+        return false;
+    }
+
+    async Offline(terminal: Terminal) {
+        const { Name: name, seat, ready, table, service } = terminal.input;
+        if (ready) await this.Unready(terminal);
+        if (seat) await this.Stand(terminal);
+        if (table) await this.LeaveTable(terminal);
+        if (service) await this.LeaveService(terminal);
+        await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'offline', name });
+        Util.removeElements(this.terminals, terminal);
+    }
+
+    async Online(terminal: Terminal, name: string) {
+        if (!this.Names.includes(name)) {
+            await terminal.prompt({ type: 'text', name: 'Name', resolved: name });
+            await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'online', name });
+            return true;
+        } else if (name) {
+            await terminal.send({ type: 'name-in-use', name });
+        }
+        return false;
+    }
+
+    async Unready(terminal: Terminal) {
+        if (terminal.input.ready) {
+            await terminal.prompt({ type: 'number', name: 'ready', resolved: false, clobber: true });
+            await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'unready', name: terminal.input.Name });
+            return true;
+        } else {
+            await terminal.send({ type: 'error', message: 'not-ready' });
+            return false;
+        }
+    }
+    async GetService(terminal: Terminal) {
+        const { service: serviceId } = terminal.input;
+        const service = this.registry[serviceId];
+        if (serviceId && !service) {
+            await terminal.prompt({ type: 'text', name: 'service', resolved: '', clobber: true });
+            await terminal.send({ type: 'error', message: 'invalid-service' });
+        }
+        return service;
+    }
+
+    async InviteRobot(terminal: Terminal) {
+        const table = await this.GetTable(terminal);
+        const service = await this.GetService(terminal);
+        const robotTerminal = new Terminal;
+        await this.join(robotTerminal);
+        this.Online(robotTerminal, (() => {
+            let name, number = this.robots.length;
+            while (this.Names.includes(name = `Robot ${++number}`)); { }
+            return name;
+        })());
+        await this.JoinService(robotTerminal, service.NAME);
+        await this.JoinTable(robotTerminal, table.id);
+        await this.Sat(robotTerminal);
+        await this.Ready(robotTerminal);
+        await this.broadcast<Messaging.User.Status>({
+            type: 'user-status',
+            status: 'invited-robot',
+            name: terminal.input.Name,
+            id: robotTerminal.input.Name
+        });
+        this.robots.push(new (service.ROBOT as any)(robotTerminal));
+        return true;
+    }
+
+    async LeaveTable(terminal: Terminal) {
+        const table = await this.GetTable(terminal);
+        if (table?.terminals.includes(terminal)) {
+            Util.removeElements(table!.terminals, terminal);
+            await terminal.prompt({ type: 'text', name: 'table', resolved: '', clobber: true });
+            await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'left-table', name: terminal.input.Name });
+            return true;
+        } else if (table) {
+            await terminal.send({ type: 'error', message: 'not-at-table' });
+        } else {
+            await terminal.send({ type: 'error', message: 'not-at-a-table' });
+        }
+        return false;
+    }
+
+    async Stand(terminal: Terminal) {
+        if (terminal.input.seat) {
+            await terminal.prompt({ type: "number", name: 'seat', resolved: 0, clobber: true });
+        } else {
+            await terminal.send({ type: 'error', message: 'not-sitting' });
+            return false;
+        }
+        if (terminal.input.ready)
+            await this.Unready(terminal);
+        await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'stood-up', name: terminal.input.Name });
+        return true;
+    }
+
+    async CreateTable(terminal: Terminal, seats?: number) {
+        const { service: serviceId } = terminal.input;
+        const service = this.registry[serviceId]!;
+        seats ||= await (async () => {
+            if (typeof service.USERS === 'number')
+                return service.USERS;
+            else if (service.USERS instanceof Array)
+                return await terminal.prompt<number>({ type: 'select', name: 'seats', choices: service.USERS.map(seats => ({ title: `${seats}`, value: seats })) });
+            else if (service.USERS === '*')
+                return await terminal.prompt<number>({ type: 'number', name: 'seats' });
+            else return undefined
+        })();
+
+        if (seats) {
+            if (
+                (service.USERS instanceof Array && !service.USERS.includes(seats))
+                || (typeof service.USERS === 'number' && seats !== service.USERS)
+            ) {
+                await terminal.prompt<number>({ type: 'number', name: 'seats', resolved: 0, clobber: true });
+                await terminal.send({ type: 'error', message: 'invalid-seats' });
+                return false;
+            }
+            const id = Util.UUID;
+            const table = new Table({ service, seats, creator: terminal, id });
+            this.tables.push(table);
+            await this.broadcast<Messaging.User.Status>({ type: 'user-status', name: terminal.input.Name, status: 'created-table', id, seats, service: serviceId });
+            await terminal.prompt({ type: 'text', name: 'table', resolved: table.id });
+            return true;
+        }
+        return false;
+    }
+
+    async Ready(terminal: Terminal) {
+        const service = await this.GetService(terminal);
+        if (!service) return false;
+
+        const table = Util.findWhere(this.tables, { id: terminal.input.table })!;
+        if (!table) {
+            await terminal.send({ type: 'error', message: 'invalid-table' });
+            return false;
+        }
+
+        if (terminal.input.ready) {
+            await terminal.send({ type: 'error', message: 'already-ready' });
+            return false;
+        }
+
+        await terminal.prompt({ type: 'number', name: 'ready', resolved: true, clobber: true });
+
+        await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'ready', name: terminal.input.Name });
+
+        const id = Util.UUID;
+        if (table!.ready) {
+            await this.broadcast<Messaging.Service.Start>({
+                type: 'start-service',
+                id,
+                table: table!.id,
+                service: service.NAME,
+                users: table!.sitting.map(t => t.input.Name)
+            });
+
+            table!
+                .start(id)
+                .then(async ({ winners, losers, error }) => {
+                    await Promise.all(table!.sitting.map(async terminal => {
+                        await terminal.prompt({ type: "number", name: 'ready', resolved: false, clobber: true });
+                        await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'unready', name: terminal.input.Name });
+                    }));
+                    await this.broadcast<Messaging.Service.End>({
+                        type: 'end-service',
+                        table: table!.id,
+                        id,
+                        service: service.NAME,
+                        results: {
+                            error,
+                            winners: winners.map(t => t.input.Name),
+                            losers: losers.map(t => t.input.Name),
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error(error);
+                    debugger;
+                })
+                .finally(async () => {
+                    const robots = this.robots.filter(robot => table.terminals.includes(robot.terminal));
+                    for (const robot of robots) {
+                        await this.Offline(robot.terminal);
+                        await robot.terminal.finish();
+                        Util.removeElements(this.robots, robot);
+                    }
+                });
+        }
+        return true;
+    }
+
     /** Continuously go through each terminal , and service them : 
      * 1) Name registration
      * 2) Service Selection
@@ -113,27 +394,20 @@ export class ServiceCenter {
                 /** Step 1 : Provide Name */
                 if (!terminal.inputs.Name && !terminal.prompts.name) {
                     const { result } = await terminal.prompt({ type: 'text', name: 'name' }, false);
-                    result.then(async (name: string) => {
-                        if (name && !this.Names.includes(name)) {
-                            await terminal.prompt({ type: 'text', name: 'Name', resolved: name });
-                            await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'online', name });
-                        } else {
-                            name && await terminal.send({ type: 'name-in-use', name });
-                        }
-                    });
+                    result.then(async (name: string) => this.Online(terminal, name));
                 }
 
                 /** Step 2 :Prompt for a service */
                 else if (terminal.input.Name && !terminal.input.service && !terminal.prompts.service) {
                     const { result } = await terminal.prompt({
+                        clobber: true,
                         type: 'select',
                         name: 'service',
                         choices: Object
                             .entries(this.registry)
                             .map(([value, { NAME: title, USERS }]) => ({ value, title, USERS }))
                     }, false);
-
-                    result.then((id: string) => this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'joined-service', name: terminal.input.Name, id }));
+                    result.then(() => this.JoinedService(terminal));
                 }
 
                 /** Step 3 : Repeat through the menu : Chat & Select-Table, Watch | Sit | Stand, Ready / Unready, Use-Service, Leave-Table, Offline */
@@ -149,125 +423,42 @@ export class ServiceCenter {
                             {
                                 title: 'Create Table',
                                 disabled: !!table || !!terminal.prompts.seats,
-                                value: async () => {
-                                    const seats = await (async () => {
-                                        if (typeof service.USERS === 'number')
-                                            return service.USERS;
-                                        else if (service.USERS instanceof Array)
-                                            return await terminal.prompt<number>({ type: 'select', name: 'seats', choices: service.USERS.map(seats => ({ title: `${seats}`, value: seats })) });
-                                        else if (service.USERS === '*')
-                                            return await terminal.prompt<number>({ type: 'number', name: 'seats' });
-                                        else return undefined
-                                    })();
-                                    if (seats) {
-                                        const id = Util.UUID;
-                                        const table = new Table({ service, seats, creator: terminal, id });
-                                        this.tables.push(table);
-                                        await this.broadcast<Messaging.User.Status>({ type: 'user-status', name: terminal.input.Name, status: 'created-table', id: table.id, seats, service: service.NAME });
-                                        await terminal.prompt({ type: 'text', name: 'table', resolved: table.id });
-                                    }
-                                }
+                                value: async () => { await this.CreateTable(terminal) }
                             },
                             {
                                 title: 'Join Table',
                                 disabled: !!table || !tables.length || !!terminal.prompts.table || !!terminal.prompts.seats,
-                                value: async () => {
-                                    const id = await terminal.prompt({
-                                        type: 'select',
-                                        name: 'table',
-                                        choices: tables.map((table, index) => {
-                                            const { id, sitting: { length: sitting }, standing: { length: standing }, empty, ready, running } = table;
-                                            return ({
-                                                value: table.id,
-                                                title: JSON.stringify({ id, sitting, standing, empty, ready, running, index }),
-                                            });
-                                        })
-                                    });
-                                    const table = Util.findWhere(tables, { id })!;
-                                    if (table) {
-                                        table.terminals.push(terminal);
-                                        await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'joined-table', name: terminal.input.Name, id: table.id });
-                                    } else {
-                                        await terminal.prompt({ type: 'text', resolved: '', name: 'table' });
-                                    }
-                                }
+                                value: async () => { await this.JoinTable(terminal); }
                             },
                             {
                                 title: 'Sit',
                                 disabled: !table || !!seat || table.full,
-                                value: async () => {
-                                    const seated: number[] = table!.sitting.map(terminal => terminal.input.seat);
-                                    const unseated = Util.without(Util.range(table!.seats), seated);
-                                    const [seat] = unseated;
-                                    if (seat) {
-                                        await terminal.prompt({ type: "number", name: 'seat', resolved: seat, clobber: true });
-                                        await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'sat-down', name: terminal.input.Name, seat });
-                                    } else {
-                                        await terminal.send({ type: 'error', message: 'table-full' });
-                                    }
-                                }
-                            },
-                            {
-                                title: 'Ready',
-                                disabled: !table || !seat || !!terminal.input.ready,
-                                value: async () => {
-                                    await terminal.prompt({ type: 'number', name: 'ready', resolved: true, clobber: true });
-                                    await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'ready', name: terminal.input.Name });
-                                    const id = Util.UUID;
-                                    if (table!.ready) {
-                                        await this.broadcast<Messaging.Service.Start>({
-                                            type: 'start-service',
-                                            id,
-                                            table: table!.id,
-                                            service: service.NAME,
-                                            users: table!.sitting.map(t => t.input.Name)
-                                        });
-                                        table!
-                                            .start(id)
-                                            .then(async ({ winners, losers, error }) => {
-                                                await Promise.all(table!.sitting.map(async terminal => {
-                                                    await terminal.prompt({ type: "number", name: 'ready', resolved: false, clobber: true });
-                                                    await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'unready', name: terminal.input.Name });
-                                                }));
-                                                await this.broadcast<Messaging.Service.End>({
-                                                    type: 'end-service',
-                                                    table: table!.id,
-                                                    id,
-                                                    service: service.NAME,
-                                                    results: {
-                                                        error,
-                                                        winners: winners.map(t => t.input.Name),
-                                                        losers: losers.map(t => t.input.Name),
-                                                    }
-                                                });
-                                            })
-                                            .catch(error => {
-                                                console.error(error);
-                                                debugger;
-                                            });
-                                    }
-                                }
+                                value: async () => { await this.Sat(terminal); }
                             },
                             {
                                 title: 'Stand',
                                 disabled: !table || !seat || table!.running,
-                                value: async () => {
-                                    if (terminal.input.ready) {
-                                        await terminal.prompt({ type: 'number', name: 'ready', resolved: false, clobber: true });
-                                        await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'unready', name: terminal.input.Name });
-                                    }
-                                    await terminal.prompt({ type: "number", name: 'seat', resolved: 0, clobber: true });
-                                    await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'stood-up', name: terminal.input.Name });
-                                }
+                                value: async () => { await this.Stand(terminal); }
+                            },
+                            {
+                                title: 'Invite Robot',
+                                disabled: !table || table.full || !service.ROBOT,
+                                value: async () => { await this.InviteRobot(terminal); }
+                            },
+                            {
+                                title: 'Ready',
+                                disabled: !table || !seat || !!terminal.input.ready,
+                                value: async () => { await this.Ready(terminal); }
+                            },
+                            {
+                                title: 'Unready',
+                                disabled: !table || !!table.running || !seat || !terminal.input.ready,
+                                value: async () => { await this.Unready(terminal); }
                             },
                             {
                                 title: 'Leave Table',
                                 disabled: !table || !!seat,
-                                value: async () => {
-                                    Util.removeElements(table!.terminals, terminal);
-                                    await terminal.prompt({ type: 'text', name: 'table', resolved: '', clobber: true });
-                                    await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'left-table', name: terminal.input.Name });
-                                }
+                                value: async () => { await this.LeaveTable(terminal) }
                             },
                             {
                                 title: 'Message Everyone',
@@ -322,6 +513,14 @@ export class ServiceCenter {
                                         }
                                     })();
                                 },
+                            },
+                            {
+                                title: 'Leave Service',
+                                value: () => this.LeaveService(terminal)
+                            },
+                            {
+                                title: 'Offline',
+                                value: () => this.Offline(terminal)
                             },
                             {
                                 title: 'Refresh',

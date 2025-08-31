@@ -100,7 +100,8 @@ for (const type of ['local', 'remote'])
         });
 
         it('Indicates the service has started when all the users have indicated they are ready', async () => {
-            await Util.waitUntil(() => client.ServiceStarted);
+            await Util.waitUntil(() => client.Service?.Instance);
+            await Util.waitUntil(() => client.Service?.Running);
         });
 
         it('Lets the Service begin to operate the terminals ( when the service is running )', async () => {
@@ -108,7 +109,7 @@ for (const type of ['local', 'remote'])
         });
 
         it('Indicates when the service has finished -- and what the results were', async () => {
-            const results = await Util.waitUntil(() => client.ServiceEnded);
+            const results = await Util.waitUntil(() => client.Service?.Results);
             expect(results!.winners.includes(terminal.id));
         });
 
@@ -129,7 +130,8 @@ for (const type of ['local', 'remote'])
                 await client.Ready();
             }
 
-            await Util.waitUntil(() => client2.ServiceStarted);
+            await Util.waitUntil(() => client2.Service?.Running);
+            await Util.waitUntil(() => client2.Service?.Instance);
 
             // play the game
             await terminal2.answer({ guess: 4 });

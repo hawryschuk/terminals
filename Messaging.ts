@@ -6,8 +6,8 @@ export namespace Messaging {
         export type Status = {
             type: 'user-status';
             name: string;
-            status: 'online' | 'offline' | 'joined-table' | 'left-table' | 'joined-service' | 'left-service' | 'sat-down' | 'stood-up' | 'created-table' | 'ready' | 'unready';
-            id?: string;
+            status: 'online' | 'offline' | 'joined-table' | 'left-table' | 'joined-service' | 'left-service' | 'sat-down' | 'stood-up' | 'created-table' | 'ready' | 'unready' | 'invited-robot';
+            id?: string;            // service-id , table-id , seat-id , robot-id
 
             seats?: number;
             seat?: number;
@@ -56,6 +56,7 @@ export namespace Messaging {
                 seats: typeof BaseService.USERS;
                 ALL_SERVICE_MESSAGES_BROADCASTED: boolean;
                 CAN_RECONSTRUCT_STATE_FROM_SERVICE_MESSAGES: boolean;
+                ROBOT: boolean;
             }>;
         };
 

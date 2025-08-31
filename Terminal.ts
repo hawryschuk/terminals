@@ -17,6 +17,10 @@ export class Terminal extends Model {
 
     async finish() {
         this.finished ||= new Date();
+        for (const [name, prompts] of Object.entries(this.prompts)) {
+            for (const prompt of prompts)
+                prompt.resolved = undefined;
+        }
         await this.notify(this.history.length - 1);
     }
 
@@ -181,12 +185,10 @@ export class Terminal extends Model {
         const result: Promise<T> = Util
             .waitUntil(
                 async () => {
-                    if (this.finished) {
-                        throw new Error('finished');
-                    }
+                    if (this.finished) return undefined;
                     return 'resolved' in (this.history[index]?.options || {});
                 },
-                { pause: 3 }
+                { pause: 50 }
             )
             .then(() => this.history[index].options!.resolved);
         return waitResult ? await result : { result, clobbered };

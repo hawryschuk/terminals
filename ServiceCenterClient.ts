@@ -49,9 +49,11 @@ export class ServiceCenterClient<T = any> {
         const { service: name } = this.terminal.input;
         const service = Util.findWhere(this.Services || [], { name });
         const Service = new class {
-            get Instance() { return client.ServiceInstance }
-            get Won() { return client.Won }
-            get Lost() { return client.Lost }
+            get Results() { return client.ServiceInstance?.finished?.results; }
+            get Running() { return !!client.Table?.started; }
+            get Instance() { return client.ServiceInstance; }
+            get Won() { return client.Won; }
+            get Lost() { return client.Lost; }
         }
         return service
             ? Object.assign(Service, service) as typeof Service & typeof service
@@ -93,7 +95,9 @@ export class ServiceCenterClient<T = any> {
         return new class Users {
             get Online() { return online }
             get Service() { return Util.where(this.Online, { service }); }
-            get Table() { return Util.where(this.Service, { table }); }
+            get Table() {
+                return Util.where(this.Service, { table });
+            }
             get Sitting() { return this.Table.filter(user => user.seat); }
             get Standing() { return this.Table.filter(user => !user.seat); }
             get Ready() { return this.Table.filter(user => user.ready); }
@@ -145,8 +149,8 @@ export class ServiceCenterClient<T = any> {
     get Tables() {
         const message = this.terminal.history.filter(m => m.message?.type === 'tables').pop();
         const index = this.terminal.history.indexOf(message!);
-        const item: Messaging.Table.List['tables'] = message?.message?.tables || [];
-        type TTable = typeof item[number];
+        const initTables: Messaging.Table.List['tables'] = message?.message?.tables || [];
+        type TTable = typeof initTables[number];
         class Table implements TTable {
             id!: string;
             seats!: Array<string | undefined>;
@@ -160,39 +164,41 @@ export class ServiceCenterClient<T = any> {
             get sitting() { return this.seats.filter(Boolean) as string[]; }
             constructor(table: TTable) { Object.assign(this, table); }
         }
-        return this.terminal
+        const tables = initTables.map(table => new Table(Util.shallowClone(table)));
+        this.terminal
             .history
-            .reduce((tables, item, i, arr) => {
+            .forEach((item, i) => {
                 if (index >= 0 && i > index && item.message?.type === 'user-status') {
                     const { name, id, seats, seat, service } = item.message as Messaging.User.Status;
                     const { status } = item.message as Messaging.User.Status;
 
-                    if (status == 'created-table')
-                        tables.push(new Table({
+                    if (status == 'created-table') {
+                        const table: Partial<Table> = {
                             id: id!,
                             standing: [name],
                             seats: new Array(seats!).fill(undefined),
                             ready: [],
                             service: service!,
-                        }));
+                        };
+                        tables.push(new Table(table as Table));
+                    }
 
                     const table = status === 'joined-table'
                         ? Util.findWhere(tables, { id })!
                         : tables.find(table => table.users.includes(name))!;
 
-                    if ((status === 'stood-up' || status === 'offline' || status === 'left-table') && table.seats.includes(name))
+                    if ((status === 'stood-up' || status === 'left-table') && table.seats.includes(name))
                         table.seats[table.seats.indexOf(name)] = undefined;
 
                     if (status === 'stood-up')
                         table.standing.push(name);
 
-                    if (status === 'offline' || status === 'left-table') {
+                    if (status === 'left-table') {
                         if (table) {
                             Util.removeElements(table.standing, name);
                             Util.removeElements(table.ready, name);
                         } else if (status === 'left-table') {
                             console.error('anomaly-no-table', item);
-                            debugger;
                         }
                     }
 
@@ -204,17 +210,16 @@ export class ServiceCenterClient<T = any> {
                         Util.removeElements(table.standing, name);
                     }
 
-                    if (status === 'ready')
+                    if (status === 'ready') {
                         table.ready.push(name);
+                    }
 
-                    if (status === 'unready')
+                    if (status === 'unready') {
                         Util.removeElements(table.ready, name);
+                    }
                 }
-                return tables;
-            }, item.map(table => new Table(Util.shallowClone(table))))
-        // .filter(table => {
-        //     table.service === this.Service?.id
-        // });
+            });
+        return tables;
     }
 
     get LargestTable() { return [...this.Tables].sort((a, b) => b.seats.length - a.seats.length).shift()?.seats || []; }
@@ -222,10 +227,14 @@ export class ServiceCenterClient<T = any> {
     get Won() { return this.ServiceInstance?.finished?.results?.winners.includes(this.terminal.input.Name); }
     get Lost() { return this.ServiceInstance?.finished?.results?.losers.includes(this.terminal.input.Name); }
 
-    /** All instances ran for this service */
+    /** Service instance ( guaranteed to be a complete */
     get ServiceInstance() {
-        const { Service } = this;
-        const { UserName, Table } = this;
+        const { Service, UserName, Table } = this;
+
+        if (!Service?.ALL_SERVICE_MESSAGES_BROADCASTED && !Table?.sitting.includes(UserName!)) {
+            return undefined;
+        }
+
         const lastStatus = (this.terminal.history as TerminalActivity<Messaging.User.Status>[])
             .filter(h =>
                 h.message?.type === 'user-status'
@@ -270,10 +279,11 @@ export class ServiceCenterClient<T = any> {
             else if (sm?.type === 'service-message' && sm.id === instance?.id)
                 instance.messages.push(sm.message);
         }
+
         return instance;
     }
 
-    get Results() { return Util.waitUntil(() => this.ServiceInstance?.finished!); }
+    get Results() { return Util.waitUntil(() => this.ServiceInstance?.finished?.results!); }
 
     get Menu() { return this.terminal.prompts.menu?.[0] }
 
