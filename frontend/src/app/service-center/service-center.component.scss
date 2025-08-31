@@ -16,8 +16,13 @@
     }
 }
 
+app-terminals {
+    max-height: 400px;
+}
+
 #sections {
     flex: 1;
+    overflow: hidden; // Only .main should scroll
 
     &>section {
         height: 100%;
@@ -33,12 +38,15 @@
             display: none;
         }
 
+        app-chat {
+            margin-top: auto;
+            min-height: 300px;
+        }
 
         .main {
-            min-height: 400px;
-            max-height: calc(100% - 600px);
+            flex: 1;
+            height: 100%;
             overflow: auto;
-
             display: flex;
             flex-direction: column;
             border: 1px solid red;
@@ -73,15 +81,10 @@
 
             #instance-container {
                 flex: 1;
+                height: 100%;
+                overflow: auto;
             }
         }
 
-        app-chat {
-            flex: 1;
-        }
     }
-}
-
-app-terminals {
-    height: 400px;
 }
