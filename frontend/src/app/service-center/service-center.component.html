@@ -73,18 +73,30 @@
                 <tbody>
                     <tr *ngFor="let table of client.Tables; let i = index">
                         <td> #{{i+1}} </td>
-                        <td> <button type="button" (click)="client.JoinTable(table.id)"> Watch </button> </td>
+                        <td>
+                            <button type="button" (click)="client.JoinTable(table.id)" *ngIf="!client.Table">
+                                Watch
+                            </button>
+
+                            <button
+                                *ngIf="client.User!.table==table.id && menu.includes('Stand')"
+                                (click)="client.Stand()">
+                                Stand
+                            </button>
+
+                            <button *ngIf="client.User!.table==table.id && menu.includes('Leave Table')"
+                                (click)="client.LeaveTable()">
+                                Leave
+                            </button>
+
+                        </td>
                         <td *ngFor="let seat of client.LargestTable; let index = index" class="seat">
                             <ng-container *ngIf="table.seats.length >= index+1 ">
 
                                 <button [disabled]="!!client.User!.seat" class="join" type="button"
-                                    *ngIf="!table.seats[index] && !(client.User!.table==table.id && client.User!.seat==index+1)"
+                                    *ngIf="!table.users.includes(client.UserName!) &&  !table.seats[index] && !(client.Table && client.Table.id!==table.id) && !(client.User!.table==table.id && client.User!.seat==index+1)"
                                     (click)="client.Sit(index+1)">
                                     JOIN
-                                </button>
-
-                                <button *ngIf="client.User!.table==table.id && client.User!.seat==index+1">
-                                    STAND
                                 </button>
 
                                 <span *ngIf="table.seats[index] as user">

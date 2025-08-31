@@ -19,12 +19,16 @@ export class ServiceCenterComponent implements OnDestroy {
     Object.assign(window, { serviceCenterComponent: this });
     effect(() => localStorage.section = this.section());
     effect(() => this.sections().forEach(({ node, title }) => node.setAttribute('data-selected', `${this.section() === title}`)));
-    effect(() => this.section.set(this.sections().at(-1)?.title), { allowSignalWrites: true });
-    effect(() => this.sections().length && !Util.findWhere(this.sections(), { title: this.section() })
-      && this.section.set(this.sections().at(-1)?.title)
-      , { allowSignalWrites: true });
+    effect(() => {
+      const last = this.sections().at(-1)?.title;
+      const newaddition = !this.lastSections.includes(last!);
+      const removed = !Util.findWhere(this.sections(), { title: this.section() });
+      if ((newaddition || removed) && last) this.section.set(last);
+      this.lastSections = this.sections().map(s => s.title);
+    }, { allowSignalWrites: true });
   }
 
+  lastSections: string[] = [];
   terminal = model.required<Terminal>();
   terminals = model<Terminal[]>([]);
   sections = signal<{ node: HTMLHeadingElement; title: string; }[]>([]);
