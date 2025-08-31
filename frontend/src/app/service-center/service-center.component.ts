@@ -6,18 +6,18 @@ import { FormsModule } from '@angular/forms';
 import { ChatComponent } from '../chat/chat.component';
 import { TerminalsComponent } from "../terminals/terminals.component";
 
-export const onTerminalUpdated = ({ component, handler, terminal }: { component: any; handler: Function; terminal: Signal<Terminal>; }) => {
+export const onTerminalUpdated = ({ component, handler, terminal }: { component: any; handler: () => any; terminal: Signal<Terminal>; }) => {
   const terminalSubscriptions = new Map<Terminal, { unsubscribe: Function }>;
-  effect(() => {
-    handler();
-    if (terminal() && !terminalSubscriptions.has(terminal()))
-      terminalSubscriptions.set(terminal(), terminal().subscribe({ handler: () => handler() }));
-  });
   const { ngOnDestroy } = component;
   component.ngOnDestroy = () => {
     [...terminalSubscriptions.values()].forEach(s => s.unsubscribe());
     ngOnDestroy?.();
   }
+  effect(() => {
+    if (terminal() && !terminalSubscriptions.has(terminal())) {
+      terminalSubscriptions.set(terminal(), terminal().subscribe({ handler }));
+    }
+  });
 };
 
 @Component({
@@ -36,13 +36,7 @@ export class ServiceCenterComponent {
     onTerminalUpdated({
       component: this,
       terminal: this.terminal,
-      handler: () => {
-        const users = Object.keys(this.client.Messages.Direct || {}).sort();
-        const [defaultUser] = users;
-        if (defaultUser && !users.includes(this.selectedUser!)) {
-          this.selectedUser = defaultUser;
-        }
-      }
+      handler: () => this.selectedUser ||= Object.keys(this.client.Messages.Direct || {}).sort().shift()
     });
     effect(() => localStorage.section = this.section());
     effect(() => this.sections().forEach(({ node, title }) => node.setAttribute('data-selected', `${this.section() === title}`)));

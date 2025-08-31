@@ -134,7 +134,6 @@
                 <li *ngFor="let name of client.Table!.seats; let index=index"
                     [attr.data-ready]="client.Table!.ready.includes(name!)" [attr.data-empty]="!name">
 
-                    <span class="index">{{ index +1 }}</span>
                     <span class="name" *ngIf="name"> {{ name }} </span>
                     <button *ngIf="name && menu.includes('Boot Robot') && client.Table!.robots.includes(name!)"
                         (click)="client.BootRobot(index+1)"> Boot </button>
@@ -162,7 +161,7 @@
     <section id="direct-messages" *ngIf="client.Messages.Direct">
         <h3 #section>Direct Messages</h3>
 
-        <app-chat [(selectedUser)]="selectedUser" (send)="client.Message.Direct({ to: selectedUser!, message: $event})"
+        <app-chat [selectedUser]="selectedUser" (selectedUserChange)="initiateDirectMessaging($event)" (send)="client.Message.Direct({ to: selectedUser!, message: $event})"
             [users]="client.Users.DirectMessaged" type="direct"
             [messages]="selectedUser ? client.Messages.Direct[selectedUser] : []"></app-chat>
 
