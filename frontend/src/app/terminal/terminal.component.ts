@@ -1,9 +1,10 @@
-import { ChangeDetectorRef, Component, effect, ElementRef, input, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, effect, ElementRef, input, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Util } from '@hawryschuk-common/util';
 import { BehaviorSubject } from 'rxjs';
 import { Terminal } from '@hawryschuk-terminal-restapi';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { onTerminalUpdated } from './onTerminalUpdated';
 
 @Component({
   selector: 'app-terminal',
@@ -12,18 +13,28 @@ import { FormsModule } from '@angular/forms';
   standalone: true,
   imports: [CommonModule, FormsModule]
 })
-export class TerminalComponent implements OnDestroy {
+export class TerminalComponent {
   @ViewChild('container') private container!: ElementRef;
   terminal = input.required<Terminal>();
-  terminalSubscriptions = new Map<Terminal, { unsubscribe: Function }>;
-  ngOnDestroy = () => [...this.terminalSubscriptions.values()].forEach(s => s.unsubscribe());
+  lines: Terminal['buffer'] = [];
 
   constructor(public cd: ChangeDetectorRef) {
-    effect(() => {
-      this.onTerminalUpdated();
-      if (this.terminal() && !this.terminalSubscriptions.has(this.terminal()))
-        this.terminalSubscriptions.set(this.terminal(), this.terminal().subscribe({ handler: () => this.onTerminalUpdated() }));
-    });
+    onTerminalUpdated({
+      component: this,
+      terminal: this.terminal,
+      handler: async () => {
+        this.cd.markForCheck();
+        this.cd.detectChanges();
+        await Util.pause(5); // prevents the form from updating immediately , having an input selected/activeElement , and having an event from another form affect this one
+        if (document.querySelector('.prompt input')) {
+          const input = await Util.waitUntil(() => document.querySelector('.prompt input:not([disabled])')! as HTMLInputElement);
+          input.focus();
+          input.checked = true;
+        }
+        this.container.nativeElement.scrollTop = this.container.nativeElement.scrollHeight;
+        this.lines = this.terminal().buffer;
+      }
+    })
   }
 
   Number = Number;
@@ -42,18 +53,6 @@ export class TerminalComponent implements OnDestroy {
     event.preventDefault();
     event.stopImmediatePropagation();
     event.stopPropagation();
-  }
-
-  async onTerminalUpdated() {
-    this.cd.markForCheck();
-    this.cd.detectChanges();
-    await Util.pause(5); // prevents the form from updating immediately , having an input selected/activeElement , and having an event from another form affect this one
-    if (document.querySelector('.prompt input')) {
-      const input = await Util.waitUntil(() => document.querySelector('.prompt input:not([disabled])')! as HTMLInputElement);
-      input.focus();
-      input.checked = true;
-    }
-    this.container.nativeElement.scrollTop = this.container.nativeElement.scrollHeight;
   }
 
 }

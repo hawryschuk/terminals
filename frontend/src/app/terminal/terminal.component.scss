@@ -16,7 +16,13 @@
     input {
         color: white;
         background-color: black;
+
+        .stdin {
+            color: cyan;
+        }
     }
+
+
 
     #stdout {
         flex: 1;
@@ -32,7 +38,7 @@
             .message span {
                 font-weight: bold;
                 margin-right: 10px;
-                border-bottom: 2px solid white;
+                color: yellow;
             }
 
             form {

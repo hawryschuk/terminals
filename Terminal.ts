@@ -53,11 +53,11 @@ export class Terminal extends Model {
     */
     get input(): Record<string, any> {
         return this.history.reduce((input, item) => {
-            if (item.options?.name)
-                if ('resolved' in item.options)
-                    input[item.options.name] = item.options.resolved;
+            if (item.prompt?.name)
+                if ('resolved' in item.prompt)
+                    input[item.prompt.name] = item.prompt.resolved;
                 else
-                    delete input[item.options.name];
+                    delete input[item.prompt.name];
             return input;
         }, {} as any)
     }
@@ -65,16 +65,16 @@ export class Terminal extends Model {
     /** Will give a history [array] of answers for each question prompted */
     get inputs(): Record<string, any[]> {
         return this.history.reduce((input, item) => {
-            if (item.options?.name && 'resolved' in item.options)
-                (input[item.options.name] ||= []).push(item.options.resolved);
+            if (item.prompt?.name && 'resolved' in item.prompt)
+                (input[item.prompt.name] ||= []).push(item.prompt.resolved);
             return input;
         }, {} as any)
     }
 
     get inputIndexes() {
         return this.history.reduce((input, item, index) => {
-            if (item.options?.name && 'resolved' in item.options)
-                input[item.options.name] = index;
+            if (item.prompt?.name && 'resolved' in item.prompt)
+                input[item.prompt.name] = index;
             return input;
         }, {} as { [name: string]: number; })
     }
@@ -83,61 +83,69 @@ export class Terminal extends Model {
         return this.history.slice(-1)[0]
     }
 
-
-    get prompts2() {
+    get allPrompts() {
         return this
             .history
-            .filter((item: any) => item.type === 'prompt' && item.options)
-            .reduce((all, item) => {
-                (all[item.options!.name] ||= []).push(item.options!);
+            .reduce((all, { prompt }) => {
+                if (prompt) (all[prompt.name] ||= []).push(prompt);
                 return all;
-            }, {} as { [name: string]: Prompt[] });
+            }, {} as Record<string, Prompt[]>);
     }
 
-    get promptedActivity(): TerminalActivity[] {
+    get unansweredPrompts() {
         return this
             .history
-            .filter((item: any) => item.type === 'prompt' && item.options && !('resolved' in item.options));
+            .filter(({ prompt }) => prompt && !('resolved' in prompt));
+
     }
 
     get prompts(): { [name: string]: Prompt[] } {
         return this
-            .promptedActivity
-            .reduce((all, item) => {
-                if (item.options) ((all[item.options.name] ||= []) as any[]).push(item.options)
+            .history
+            .reduce((all, { prompt }) => {
+                if (prompt && !('resolved' in prompt)) ((all[prompt.name] ||= []) as any[]).push(prompt);
                 return all;
-            }, {} as { [name: string]: Prompt[] });
-    }
-
-    promptedFor({ name, value } = {} as { name: string; value: any }) {
-        return this
-            .promptedActivity
-            .filter(i => i.options?.name === name)
-            .find(i => ('initial' in i.options! && i.options!.initial === value)
-                || (i.options?.choices || []).some(c => c.value === value && !c.disabled)
-            )
+            }, {} as Record<string, Prompt[]>);
     }
 
     /** Will give the first unresolved prompt */
-    get prompted(): Prompt | null {
+    get prompted() {
         return this
             .history
-            .find((item: any) => Util.safely(() => item.type === 'prompt' && !('resolved' in item.options)))
-            ?.options
-            || null
+            .find(item => item.prompt && !('resolved' in item.prompt))
+            ?.prompt;
     }
 
-    get buffer(): string {
-        return this.history
-            .filter(item => item.type !== 'prompt' || item.options?.resolved !== undefined)
-            .map(item => item.message || (item.options?.resolved !== undefined ? `${item.options?.message || item.options.name} ${item.options?.resolved}` : item.options?.message))
-            .map(item => typeof item === 'string' ? item : JSON.stringify(item))
-            .join('\n');
+    /** STDOUT and STDIN (RESOLVED) */
+    static DEFAULT_TO_STRING = ({}).toString();
+    get buffer(): Array<{ type: 'stdin' | 'stdout'; data: string; }> {
+        const tostring = (data: any) => {
+            if (typeof data === 'string')
+                return data;
+            else {
+                const str = data?.toString();
+                return str === Terminal.DEFAULT_TO_STRING
+                    ? JSON.stringify(data)
+                    : str;
+            }
+        };
+        const items = this.history
+            .reduce((items, item) => {
+                if (!item.prompt) {
+                    items.push({ type: 'stdout', data: tostring(item.stdout) });
+                } else if ('resolved' in item.prompt) {
+                    const { message, name, resolved } = item.prompt;
+                    items.push({ type: 'stdin', data: `${message || name} ${tostring(item.prompt.resolved)}` });
+                }
+                return items;
+            }, [] as any);
+        return items;
     }
 
     async send<T = any>(message: T) {
+        /** TODO: Think about sending a Shallow Clone of message , in the case its a mutable object outside of this function call ( by the sender, or the receiver ) */
         if (this.finished) throw new Error('webterminal is finished');
-        this.history.push({ type: 'stdout', message, time: Date.now() });
+        this.history.push({ stdout: Util.shallowClone(message), time: Date.now() });
         this.notify(this.history.length - 1);
     }
 
@@ -157,24 +165,29 @@ export class Terminal extends Model {
         }, { pause: 2 });
     }
 
-    prompt<T = any>(options: Prompt<T>): Promise<T>;
-    prompt<T = any>(options: Prompt<T>, waitResult: false): Promise<{ result: Promise<T>, clobbered: boolean; }>;
-    async prompt<T = any>(options: Prompt<T>, waitResult = true) {
+    prompt<T = any>(prompt: Prompt<T>): Promise<T>;
+    prompt<T = any>(prompt: Prompt<T>, waitResult: false): Promise<{ result: Promise<T>, clobbered: boolean; }>;
+    async prompt<T = any>(prompt: Prompt<T>, waitResult = true) {
         if (this.finished) throw new Error('finished');
-
-        // Overwrite the first one , and remove  : TODO : think , auto-clobber
+        const { prompts } = this;
+        const time = Date.now();
         let { history: { length: index } } = this;
         let same = false;
-        if ((options.clobber || 'resolved' in options) && this.prompts[options.name]) {
-            const indexes = this.prompts[options.name].map(o => this.history.findIndex(i => i.options === o));
+
+        // clobber
+        if ((prompt.clobber || 'resolved' in prompt) && prompts[prompt.name]) {
+            const indexes = prompts[prompt.name].map(o => this.history.findIndex(i => i.prompt === o));
             index = indexes.pop()!;
-            for (const index of indexes) this.history[index].options!.resolved = null;
-            same = !!Util.equals(this.history[index].options, options);
-            if (!same) Object.assign(this.history[index], { options, time: Date.now() });
+            for (const index of indexes) this.history[index].prompt!.resolved = null;
+            same = !!Util.equals(this.history[index].prompt, prompt);
+            if (!same) {
+                Object.assign(this.history[index], { prompt, time });
+            }
         }
+
         // Add to the history
         else {
-            this.history.push({ type: 'prompt', options, time: Date.now() });
+            this.history.push({ prompt, time });
         }
 
         // await this.save();
@@ -183,25 +196,20 @@ export class Terminal extends Model {
         const clobbered = index === this.history.length;
 
         const result: Promise<T> = Util
-            .waitUntil(
-                async () => 'resolved' in (this.history[index]?.options || {})
-                    || this.finished,
-                { pause: 50 }
-            )
-            .then(() => this.history[index].options!.resolved);
+            .waitUntil(async () => 'resolved' in (this.history[index]?.prompt || {}) || this.finished, { pause: 50 })
+            .then(() => this.history[index].prompt!.resolved);
         return waitResult ? await result : { result, clobbered };
     }
 
     async respond(value: any, name?: string, index?: number) {
         if (this.finished) throw new Error('webterminal is finished')
-        index ??= this.history.findIndex(item => item?.type === 'prompt' && item.options && !('resolved' in item.options!) && (!name || name == item.options!.name));
-        name ??= this.history[index]?.options?.name;
-        const item = Util.deepClone(this.history[index]);
-        if (!item) throw new Error(`unknown-item`);
-        if (item.type !== 'prompt') throw new Error(`type-mismatch`);
-        if ('resolved' in item.options) throw new Error(`already-resolved`);
-        if (item.options.name !== name) throw new Error(`name-mismatch`);
-        item.options.resolved = value;
+        index ??= this.history.findIndex(item => item.prompt && !('resolved' in item.prompt) && (!name || name == item.prompt.name));
+        name ??= this.history[index]?.prompt?.name;
+        const item: TerminalActivity = Util.deepClone(this.history[index]);
+        if (!item.prompt) throw new Error(`unknown-item`);
+        if ('resolved' in item.prompt!) throw new Error(`already-resolved`);
+        if (item.prompt!.name !== name) throw new Error(`name-mismatch`);
+        item.prompt.resolved = value;
         this.history[index] = item;
         // await this.save();
         this.notify(index);

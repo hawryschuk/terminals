@@ -37,10 +37,10 @@ export class ServiceCenterClient<T = any> {
 
     constructor(public terminal: Terminal) { }
 
-    get NameInUse() { return this.terminal.prompts.name && !this.terminal.input.Name && this.terminal.history.some(i => i.message?.type === 'name-in-use'); }
+    get NameInUse() { return this.terminal.prompts.name && !this.terminal.input.Name && this.terminal.history.some(i => i.stdout?.type === 'name-in-use'); }
 
     get Services() {
-        const services = (this.terminal.history as TerminalActivity<Messaging.Service.List>[]).find(m => m.message?.type === 'services')?.message?.services;
+        const services = (this.terminal.history as TerminalActivity<Messaging.Service.List>[]).find(m => m.stdout?.type === 'services')?.stdout?.services;
         return services;
     }
 
@@ -65,13 +65,13 @@ export class ServiceCenterClient<T = any> {
         const client = this;
         const users = this.terminal
             .history
-            .filter(i => i.message?.type === 'users')
-            .map(item => item.message as Messaging.User.List)
+            .filter(i => i.stdout?.type === 'users')
+            .map(item => item.stdout as Messaging.User.List)
             .pop()?.users || [];
         const messages = this.terminal
             .history
-            .filter(m => m.type === 'stdout' && m.message?.type === 'user-status')
-            .map(({ message, time }) => ({ ...message, time }) as Messaging.User.Status & { time: number; });
+            .filter(m => m.stdout?.type === 'user-status')
+            .map(({ stdout: message, time }) => ({ ...message, time }) as Messaging.User.Status & { time: number; });
         const online = Array.from(messages.reduce(
             (users, message) => {
                 if (message.status === 'online') users.set(message.name, { name: message.name });
@@ -119,8 +119,8 @@ export class ServiceCenterClient<T = any> {
         const { service, table, Name } = this.terminal.input;
         const messages = this.terminal
             .history
-            .filter(m => m.type === 'stdout' && m.message?.type === 'message')
-            .map(({ message, time }) => ({ ...message, time }) as Messaging.Chat & { time: number; });
+            .filter(m => m.stdout?.type === 'message')
+            .map(({ stdout: message, time }) => ({ ...message, time }) as Messaging.Chat & { time: number; });
         return new class Messages {
             get Everyone() { return Util.where(messages, { to: 'everyone' }); }
             get Lounge() { return Util.where(messages, { to: 'lounge', id: service }); }
@@ -164,9 +164,9 @@ export class ServiceCenterClient<T = any> {
      * - And from that we can deduce the Users/Table status 
      */
     get Tables() {
-        const message = this.terminal.history.filter(m => m.message?.type === 'tables').pop();
+        const message = this.terminal.history.filter(m => m.stdout?.type === 'tables').pop();
         const index = this.terminal.history.indexOf(message!);
-        const initTables: Messaging.Table.List['tables'] = message?.message?.tables || [];
+        const initTables: Messaging.Table.List['tables'] = message?.stdout?.tables || [];
         type TTable = typeof initTables[number];
         class Table implements TTable {
             id!: string;
@@ -186,9 +186,9 @@ export class ServiceCenterClient<T = any> {
         this.terminal
             .history
             .forEach((item, i) => {
-                if (index >= 0 && i > index && item.message?.type === 'user-status') {
-                    const { name, id, seats, seat, service } = item.message as Messaging.User.Status;
-                    const { status } = item.message as Messaging.User.Status;
+                if (index >= 0 && i > index && item.stdout?.type === 'user-status') {
+                    const { name, id, seats, seat, service } = item.stdout as Messaging.User.Status;
+                    const { status } = item.stdout as Messaging.User.Status;
 
                     if (status == 'created-table') {
                         const table: Partial<Table> = {
@@ -259,17 +259,17 @@ export class ServiceCenterClient<T = any> {
 
         const lastStatus = (this.terminal.history as TerminalActivity<Messaging.User.Status>[])
             .filter(h =>
-                h.message?.type === 'user-status'
-                && h.message.name == UserName
-                && (h.message.status == 'joined-table'
-                    || h.message.status == 'created-table'
-                    || h.message.status == 'left-table'
+                h.stdout?.type === 'user-status'
+                && h.stdout.name == UserName
+                && (h.stdout.status == 'joined-table'
+                    || h.stdout.status == 'created-table'
+                    || h.stdout.status == 'left-table'
                 )
             )
             .pop();
-        const history = Service && Table && lastStatus?.message
-            && /joined|created/.test(lastStatus.message.status)
-            && lastStatus.message.id === Table.id
+        const history = Service && Table && lastStatus?.stdout
+            && /joined|created/.test(lastStatus.stdout.status)
+            && lastStatus.stdout.id === Table.id
             ? this.terminal.history.slice(this.terminal.history.indexOf(lastStatus))
             : [];
         let instance: undefined | {
@@ -280,7 +280,7 @@ export class ServiceCenterClient<T = any> {
             finished?: Messaging.Service.End;
             messages: Messaging.Service.Message<T>['message'][];
         };
-        for (const { message } of history) {
+        for (const { stdout: message } of history) {
             const ss: Messaging.Service.Start = message,
                 se: Messaging.Service.End = message,
                 sm: Messaging.Service.Message = message;
@@ -383,7 +383,7 @@ export class ServiceCenterClient<T = any> {
     }
 
     async BootRobot(seat: number) { await this.SelectMenu('Boot Robot'); }
-    async InviteRobot() { await this.SelectMenu('Invite Robot'); }
+    async InviteRobot(seat?: number) { await this.SelectMenu('Invite Robot'); }
 
     async Stand() {
         await this.SelectMenu('Stand');

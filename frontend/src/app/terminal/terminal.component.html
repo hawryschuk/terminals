@@ -1,13 +1,13 @@
 <section class="container" #container>
-    <code id="stdout" [ngClass]="{empty:!terminal().buffer}">
-        {{terminal().buffer}}
-    </code>
+    <div id="stdout">
+        <div *ngFor="let line of lines" [class]="line.type">{{line.data}}</div>
+    </div>
 
     <div id="prompts">
-        <ng-container *ngFor="let prompted of terminal().promptedActivity; let i = index">
-            <div class="prompt" *ngIf="prompted.options as prompt" [attr.data-index]="i">
+        <ng-container *ngFor="let item of terminal().unansweredPrompts; let index = index">
+            <div class="prompt" *ngIf="item.prompt as prompt" [attr.data-index]="index">
                 <div class="message">
-                    <span> {{prompt.message || prompt.name}} </span>
+                    <span> {{ prompt.message || prompt.name }} </span>
                 </div>
 
                 <form novalidate *ngIf="prompt.type=='number'"

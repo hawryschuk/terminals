@@ -1,12 +1,14 @@
 export type PromptType =
     | "text"
-    | "password"
-    | "invisible"
     | "number"
     | "confirm"
+    | "select"
+    | 'any'
+
+    | "password"
+    | "invisible"
     | "list"
     | "toggle"
-    | "select"
     | "multiselect"
     | "autocomplete"
     | "date"

@@ -164,6 +164,6 @@ for (const type of ['local', 'remote'])
         });
 
         it('expects no errors ', () => {
-            expect([client, client2, client3].every(c => !c.terminal.history.some(i => i.message?.type === 'error')));
+            expect([client, client2, client3].every(c => !c.terminal.history.some(i => i.stdout?.type === 'error')));
         })
     });

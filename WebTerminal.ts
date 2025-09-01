@@ -58,22 +58,22 @@ export class WebTerminal extends Terminal {
 
     private atomic<T>(block: () => Promise<T>): Promise<T> { return Mutex.getInstance(`WebTerminal::${this.id}`).use({ block }); }
 
-    override async send(message: any) {
+    override async send(stdout: any) {
         return await this.atomic(async () => {
             const { history: { length } } = this;
-            await this.request({ method: 'put', url: `terminal/${this.id}`, body: { type: 'stdout', message } });
+            await this.request({ method: 'put', url: `terminal/${this.id}`, body: { stdout } });
             await Util.waitUntil(() => this.history.length > length);
         });
     }
 
-    override async prompt<T = any>(options: Prompt<T>, waitResult = true) {
+    override async prompt<T = any>(prompt: Prompt<T>, waitResult = true) {
         const { index } = await this.atomic(async () => {
             const { history: { length } } = this;
-            await this.request({ method: 'put', url: `terminal/${this.id}`, body: { type: 'prompt', options } });
+            await this.request({ method: 'put', url: `terminal/${this.id}`, body: { prompt } });
             return (await Util.waitUntil(() => {
                 if (this.finished) throw new Error('finished');
                 if (this.history.length > length) {
-                    const index = this.history.findIndex((item, index) => index >= length && item.type === 'prompt' && item.options?.name === options.name);
+                    const index = this.history.findIndex((item, index) => index >= length && item.prompt?.name === prompt.name);
                     if (index >= 0) return { index };
                 }
                 return undefined;
@@ -83,9 +83,9 @@ export class WebTerminal extends Terminal {
         const result = Util
             .waitUntil(() => {
                 if (this.finished) throw new Error('finished');
-                return 'resolved' in (this.history[index].options || {})
+                return 'resolved' in (this.history[index].prompt || {})
             })
-            .then(() => this.history[index]!.options!.resolved)
+            .then(() => this.history[index]!.prompt!.resolved)
         // .then(result => options.choices ? options.choices[result].value : result);
 
         return waitResult ? await result : { result };
@@ -95,21 +95,21 @@ export class WebTerminal extends Terminal {
         return await this.atomic(async () => {
             const { history: { length } } = this;
 
-            index ??= this.history.findIndex(item => item?.type === 'prompt' && item.options && !('resolved' in item.options!) && (!name || name == item.options!.name));
+            index ??= this.history.findIndex(item => item.prompt && !('resolved' in item.prompt!) && (!name || name == item.prompt!.name));
             if (!(index >= 0)) throw new Error('not-prompted');
 
-            name ??= this.history[index]?.options?.name;
-            if (this.history[index]?.options?.name !== name) throw new Error('not-prompted-for-same-name');
+            name ??= this.history[index]?.prompt?.name;
+            if (this.history[index]?.prompt?.name !== name) throw new Error('not-prompted-for-same-name');
 
             await this.request({ method: 'post', url: `terminal/${this.id}/response`, body: { value, index, name } });
 
-            const options = await Util.waitUntil(() => {
+            const prompt = await Util.waitUntil(() => {
                 if (this.finished) throw new Error('finished');
-                const { options = {} } = this.history[index!] || {};
-                return 'resolved' in options ? options : undefined;
+                const { prompt } = this.history[index!];
+                return prompt && 'resolved' in prompt ? prompt : undefined;
             });
 
-            if (options!.resolved !== value) throw new Error('resolved-with-something-else');
+            if (prompt!.resolved !== value) throw new Error('resolved-with-something-else');
 
             this.notify(index);
         });
@@ -122,8 +122,9 @@ export class WebTerminal extends Terminal {
 
     /** Synchronize the last activity fetched online into this instance */
     private async synchronize() {
+        const { prompted } = this;
         const before = Util.deepClone(this.history);
-        const index = this.prompted ? this.history.findIndex(i => i.options === this.prompted) : this.history.length;
+        const index = prompted ? this.history.findIndex(i => i.prompt === prompted) : this.history.length;
         const after = [
             ...before.slice(0, index),
             ...await this

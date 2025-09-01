@@ -1,24 +1,11 @@
-import { ChangeDetectorRef, Component, effect, ElementRef, Input, model, OnDestroy, QueryList, Signal, signal, ViewChildren } from '@angular/core';
+import { ChangeDetectorRef, Component, effect, ElementRef, Input, model, OnDestroy, QueryList, signal, ViewChildren } from '@angular/core';
 import { Util } from '@hawryschuk-common/util';
 import { ServiceCenter, ServiceCenterClient, Terminal } from '@hawryschuk-terminal-restapi';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ChatComponent } from '../chat/chat.component';
 import { TerminalsComponent } from "../terminals/terminals.component";
-
-export const onTerminalUpdated = ({ component, handler, terminal }: { component: any; handler: () => any; terminal: Signal<Terminal>; }) => {
-  const terminalSubscriptions = new Map<Terminal, { unsubscribe: Function }>;
-  const { ngOnDestroy } = component;
-  component.ngOnDestroy = () => {
-    [...terminalSubscriptions.values()].forEach(s => s.unsubscribe());
-    ngOnDestroy?.();
-  }
-  effect(() => {
-    if (terminal() && !terminalSubscriptions.has(terminal())) {
-      terminalSubscriptions.set(terminal(), terminal().subscribe({ handler }));
-    }
-  });
-};
+import { onTerminalUpdated } from '../terminal/onTerminalUpdated';
 
 @Component({
   selector: 'app-service-center',

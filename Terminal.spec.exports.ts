@@ -6,7 +6,7 @@ export const testTerminal = (terminal: Terminal) =>
     describe((terminal as any).constructor.name, () => {
         it('sends a message', async () => {                                                     // Feature #1: Terminal.send(message:any)
             await terminal.send('hello');
-            expect(terminal).to.have.nested.property('history[0].message', 'hello');            // Feature #2: Terminal.history type=stdout, message=...
+            expect(terminal).to.have.nested.property('history[0].stdout', 'hello');            // Feature #2: Terminal.history type=stdout, message=...
         });
         it('prompts for input', async () => {
             terminal.prompt({ name: 'age', type: 'number', message: 'what is your age' })  // Feature #3 : Terminal.prompt(options) 
