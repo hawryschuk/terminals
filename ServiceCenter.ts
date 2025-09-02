@@ -103,15 +103,16 @@ export class ServiceCenter {
     }
 
     async Sat(terminal: Terminal, seat?: number) {
-        const { table: id } = terminal.input;
+        const { input } = terminal;
+        const { table: id, Name } = input;
         const table = Util.findWhere(this.tables, { id })!;
         const seated: number[] = table!.sitting.map(terminal => terminal.input.seat);
         const unseated = Util.without(Util.range(table!.seats), seated);
         seat ||= unseated[0];
         if (unseated.includes(seat)) {
             await terminal.prompt({ type: "number", name: 'seat', resolved: seat, clobber: true });
-            await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'sat-down', name: terminal.input.Name, seat });
-            this.users[terminal.input.Name].seat = seat;
+            await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'sat-down', name: Name, seat });
+            this.users[Name].seat = seat;
             return true;
         } else if (table.full) {
             await terminal.send({ type: 'error', message: 'table-full' });
@@ -123,9 +124,10 @@ export class ServiceCenter {
 
     async LeaveService(terminal: Terminal) {
         const service = await this.GetService(terminal);
+        const { Name } = terminal.input;
         if (service) {
-            await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'left-service', name: terminal.input.Name, id: service.NAME });
-            delete this.users[terminal.input.Name].service;
+            await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'left-service', name: Name, id: service.NAME });
+            delete this.users[Name].service;
             return true;
         } else {
             return false;
@@ -139,11 +141,13 @@ export class ServiceCenter {
 
     async JoinedService(terminal: Terminal) {
         const service = await this.GetService(terminal);
+        const { input } = terminal;
+        const { Name } = input;
         if (service) {
-            await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'joined-service', name: terminal.input.Name, id: service.NAME });
-            this.users[terminal.input.Name].service = service.NAME;
+            await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'joined-service', name: Name, id: service.NAME });
+            this.users[Name].service = service.NAME;
             return true;
-        } else if (!terminal.input.service) {
+        } else if (!input.service) {
             await terminal.send({ type: 'error', message: 'service-undefined' });
             debugger;
         }
@@ -179,11 +183,12 @@ export class ServiceCenter {
 
     async JoinedTable(terminal: Terminal) {
         const table = await this.GetTable(terminal);
+        const { Name } = terminal.input;
         if (table) {
             if (!table.terminals.includes(terminal)) {
                 table.terminals.push(terminal);
-                await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'joined-table', name: terminal.input.Name, id: table.id });
-                this.users[terminal.input.Name].table = table.id;
+                await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'joined-table', name: Name, id: table.id });
+                this.users[Name].table = table.id;
                 return true;
             } else {
                 await terminal.send({ type: 'error', message: 'already-at-table' });
@@ -258,6 +263,7 @@ export class ServiceCenter {
         const table = await this.GetTable(terminal);
         const service = await this.GetService(terminal);
         const robotTerminal = new Terminal;
+        const { Name } = terminal.input;
         await this.join(robotTerminal);
         this.Online(robotTerminal, (() => {
             let name, number = this.robots.length;
@@ -271,7 +277,7 @@ export class ServiceCenter {
         await this.broadcast<Messaging.User.Status>({
             type: 'user-status',
             status: 'invited-robot',
-            name: terminal.input.Name,
+            name: Name,
             id: robotTerminal.input.Name
         });
         this.robots.push(new (service.ROBOT as any)(robotTerminal));
@@ -279,12 +285,13 @@ export class ServiceCenter {
     }
 
     async LeaveTable(terminal: Terminal) {
+        const { Name } = terminal.input;
         const table = await this.GetTable(terminal);
         if (table?.terminals.includes(terminal)) {
             Util.removeElements(table!.terminals, terminal);
             await terminal.prompt({ type: 'text', name: 'table', resolved: '', clobber: true });
-            await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'left-table', name: terminal.input.Name });
-            delete this.users[terminal.input.Name].table;
+            await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'left-table', name: Name });
+            delete this.users[Name].table;
             return true;
         } else if (table) {
             await terminal.send({ type: 'error', message: 'not-at-table' });
@@ -295,16 +302,17 @@ export class ServiceCenter {
     }
 
     async Stand(terminal: Terminal) {
-        if (terminal.input.seat) {
+        const { Name, seat, ready } = terminal.input;
+        if (seat) {
             await terminal.prompt({ type: "number", name: 'seat', resolved: 0, clobber: true });
         } else {
             await terminal.send({ type: 'error', message: 'not-sitting' });
             return false;
         }
-        if (terminal.input.ready)
+        if (ready)
             await this.Unready(terminal);
-        this.users[terminal.input.Name].seat;
-        await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'stood-up', name: terminal.input.Name });
+        this.users[Name].seat;
+        await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'stood-up', name: Name });
         return true;
     }
 
@@ -358,9 +366,10 @@ export class ServiceCenter {
 
         await terminal.prompt({ type: 'number', name: 'ready', resolved: true, clobber: true });
 
-        await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'ready', name: terminal.input.Name });
+        const { Name } = terminal.input;
+        await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'ready', name: Name });
 
-        this.users[terminal.input.Name].ready = true;
+        this.users[Name].ready = true;
 
         const id = Util.UUID;
         if (table!.ready) {
@@ -421,15 +430,16 @@ export class ServiceCenter {
     private async maintain() {
         while (!this.finished) {
             for (const terminal of this.terminals) {
+                const { input, prompts } = terminal;
 
                 /** Step 1 : Provide Name */
-                if (!terminal.inputs.Name && !terminal.prompts.name) {
+                if (!input.Name && !prompts.name) {
                     const { result } = await terminal.prompt({ type: 'text', name: 'name' }, false);
                     result.then(async (name: string) => this.Online(terminal, name));
                 }
 
                 /** Step 2 :Prompt for a service */
-                else if (terminal.input.Name && !terminal.input.service && !terminal.prompts.service) {
+                else if (input.Name && !input.service && !prompts.service) {
                     const { result } = await terminal.prompt({
                         clobber: true,
                         type: 'select',
@@ -442,14 +452,14 @@ export class ServiceCenter {
                 }
 
                 /** Step 3 : Repeat through the menu : Chat & Select-Table, Watch | Sit | Stand, Ready / Unready, Use-Service, Leave-Table, Offline */
-                if (terminal.input.Name && terminal.input.service) {
+                if (input.Name && input.service) {
                     /** Menu */
-                    const prompted = !!terminal.prompts.menu;
+                    const prompted = !!prompts.menu;
                     const choices = () => {
-                        const service = this.registry[terminal.input.service]!;
-                        const table = Util.findWhere(this.tables, { id: terminal.input.table });
-                        const tables = Util.where(this.tables, { service });
                         const { input, prompts } = terminal;
+                        const service = this.registry[input.service]!;
+                        const table = Util.findWhere(this.tables, { id: input.table });
+                        const tables = Util.where(this.tables, { service });
                         const choices: Prompt['choices'] = [
                             {
                                 title: 'Create Table',
@@ -506,7 +516,7 @@ export class ServiceCenter {
                                             this.broadcast<Messaging.Chat>({
                                                 type: 'message',
                                                 to: 'everyone',
-                                                from: terminal.input.Name,
+                                                from: input.Name,
                                                 message: await result,
                                                 id: '*',
                                             });
@@ -516,7 +526,7 @@ export class ServiceCenter {
                             },
                             {
                                 title: 'Message Lounge',
-                                disabled: !terminal.input.Name || !!terminal.prompts.message || !terminal.input.service,
+                                disabled: !input.Name || !!prompts.message || !input.service,
                                 value: async () => {
                                     const { result } = await terminal.prompt({ type: 'text', name: 'message', clobber: true }, false);
                                     (async () => {
@@ -524,9 +534,9 @@ export class ServiceCenter {
                                             this.broadcast<Messaging.Chat>({
                                                 type: 'message',
                                                 to: 'lounge',
-                                                from: terminal.input.Name,
+                                                from: input.Name,
                                                 message: await result,
-                                                id: terminal.input.service,
+                                                id: input.service,
                                             });
                                         }
                                     })();
@@ -534,7 +544,7 @@ export class ServiceCenter {
                             },
                             {
                                 title: 'Message Table',
-                                disabled: !terminal.input.Name || !!terminal.prompts.message || !terminal.input.service || !terminal.input.table,
+                                disabled: !input.Name || !!prompts.message || !input.service || !input.table,
                                 value: async () => {
                                     const { result } = await terminal.prompt({ type: 'text', name: 'message', clobber: true }, false);
                                     (async () => {
@@ -542,9 +552,9 @@ export class ServiceCenter {
                                             this.broadcast<Messaging.Chat>({
                                                 type: 'message',
                                                 to: 'table',
-                                                from: terminal.input.Name,
+                                                from: input.Name,
                                                 message: await result,
-                                                id: terminal.input.table,
+                                                id: input.table,
                                             });
                                         }
                                     })();
@@ -552,7 +562,7 @@ export class ServiceCenter {
                             },
                             {
                                 title: 'Direct Message',
-                                disabled: !input.Name || !!prompts.message || !!terminal.prompts.to,
+                                disabled: !input.Name || !!prompts.message || !!prompts.to,
                                 value: async () => {
                                     const { result: to } = await terminal.prompt({ type: 'text', name: 'to', clobber: true }, false);
                                     const { result: message } = await terminal.prompt({ type: 'text', name: 'message', clobber: true }, false);

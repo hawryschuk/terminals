@@ -22,7 +22,7 @@ export class ServiceCenterClient<T = any> {
     }
 
     /** Multiton pattern : Once Client instance for every Terminal
-     * CachedWrapper : So getters() are executed once and cached */
+     * CachedWrapper : So getters() are cached */
     private static instances = new WeakMap<Terminal, ServiceCenterClient>;
     static getInstance<T = any>(terminal: Terminal): ServiceCenterClient<T> {
         return this.instances.get(terminal) || (() => {
@@ -36,6 +36,10 @@ export class ServiceCenterClient<T = any> {
     }
 
     constructor(public terminal: Terminal) { }
+
+    get input() { return this.terminal.input }
+
+    get prompts() { return this.terminal.prompts }
 
     get NameInUse() { return this.terminal.prompts.name && !this.terminal.input.Name && this.terminal.history.some(i => i.stdout?.type === 'name-in-use'); }
 

@@ -18,7 +18,13 @@ export class Table<T extends BaseService> {
         Object.assign(this, { ...options, id, terminals: [creator] });
     }
 
-    get sitting() { return this.terminals.filter(terminal => terminal.input.seat) }
+    get sitting() {
+        return this
+            .terminals
+            .map(terminal => ({ terminal, seat: terminal.input.seat }))
+            .sort((a, b) => a.seat - b.seat)
+            .map(i => i.terminal);
+    }
     get standing() { return this.terminals.filter(terminal => !terminal.input.seat) }
     get empty() { return this.seats - this.sitting.length }
     get full() { return this.empty === 0 }
