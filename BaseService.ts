@@ -34,23 +34,25 @@ export abstract class BaseService<T = any> {
         })));
     }
 
-    async send<T = any>(message: T, ...recipients: Terminal[]) {
+    async send<T = any>(message: T, recipients: Array<Terminal | string>) {
         const { id, service } = this;
-        return await Promise.all(recipients.map(terminal => terminal.send<Messaging.Service.Message>({
-            type: 'service-message',
-            message,
-            service,
-            id
-        })));
+        await Promise.all(recipients.map(recipient => {
+            const terminal: Terminal = typeof recipient === 'string' ? this.terminals.find(t => t.input.Name === recipient)! : recipient;
+            return terminal.send<Messaging.Service.Message>({
+                type: 'service-message',
+                message,
+                service,
+                id
+            });
+        }));
     }
 
-    async prompt<S extends string>(options: Prompt & {
-        name: Exclude<S, typeof BaseService['RESERVED_PROMPT_VARS'][number]>;
-        terminal: Terminal;
-    }): Promise<any> {
-        const _options = { ...options } as any;
-        const { terminal } = options;
-        delete _options.terminal;
-        return await terminal.prompt(_options);
+    async prompt<S extends string>(
+        user: string | Terminal,
+        prompt: Prompt & { name: Exclude<S, typeof BaseService['RESERVED_PROMPT_VARS'][number]>; },
+
+    ): Promise<any> {
+        const terminal: Terminal = typeof user === 'string' ? this.terminals.find(t => t.input.Name === user)! : user;
+        return await terminal.prompt(prompt);
     }
 }

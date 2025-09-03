@@ -190,7 +190,7 @@ export class Terminal extends Model {
             this.history.push({ prompt, time });
         }
 
-        // await this.save();
+        await this.save();
         if (!same) this.notify(index);
 
         const clobbered = index === this.history.length;
@@ -198,7 +198,8 @@ export class Terminal extends Model {
         const result: Promise<T> = Util
             .waitUntil(async () => 'resolved' in (this.history[index]?.prompt || {}) || this.finished, { pause: 50 })
             .then(() => this.history[index].prompt!.resolved);
-        return waitResult ? await result : { result, clobbered };
+        const response = waitResult ? await result : { result, clobbered };
+        return response;
     }
 
     async respond(value: any, name?: string, index?: number) {
@@ -211,7 +212,7 @@ export class Terminal extends Model {
         if (item.prompt!.name !== name) throw new Error(`name-mismatch`);
         item.prompt.resolved = value;
         this.history[index] = item;
-        // await this.save();
+        await this.save();
         this.notify(index);
     }
 

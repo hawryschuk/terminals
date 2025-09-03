@@ -1,8 +1,9 @@
-import { Signal, effect } from '@angular/core';
+import { Signal, effect, signal } from '@angular/core';
 import { Terminal } from '../../../../Terminal';
 
 
 export const onTerminalUpdated = ({ component, handler, terminal }: { component: any; handler: () => any; terminal: Signal<Terminal>; }) => {
+  const updated$ = signal(new Date);
   const terminalSubscriptions = new Map<Terminal, { unsubscribe: Function; }>;
   const { ngOnDestroy } = component;
   component.ngOnDestroy = () => {
@@ -11,7 +12,14 @@ export const onTerminalUpdated = ({ component, handler, terminal }: { component:
   };
   effect(() => {
     if (terminal() && !terminalSubscriptions.has(terminal())) {
-      terminalSubscriptions.set(terminal(), terminal().subscribe({ handler }));
+      terminalSubscriptions.set(terminal(), terminal().subscribe({
+        handler: () => {
+          updated$.set(new Date);
+          handler();
+        }
+      }));
+      handler();
     }
   });
+  return updated$;
 };

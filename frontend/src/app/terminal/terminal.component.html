@@ -11,7 +11,7 @@
                 </div>
 
                 <form novalidate *ngIf="prompt.type=='number'"
-                    (ngSubmit)="respond($event, prompt.name, number_input.value.length ? Number(number_input.value) : prompt.initial)">
+                    (ngSubmit)="respond($event, prompt, number_input.value.length ? Number(number_input.value) : prompt.initial)">
 
                     <input name="number_input" #number_input type="number" [min]="prompt.min" [max]="prompt.max"
                         [placeholder]="prompt.initial" [placeholder]="prompt.min + '-' + prompt.max">
@@ -24,25 +24,42 @@
 
                         <input id="choice{{i}}" name="choice" type="radio" [value]="choice.value"
                             [attr.disabled]="choice.disabled?1:null"
-                            (keyup.enter)="respond($event, prompt.name, choice.value)" />
+                            (keyup.enter)="respond($event, prompt, choice.value)" />
 
-                        <label (click)="respond($event, prompt.name, choice.value)"
+                        <label (click)="respond($event, prompt, choice.value)"
                             [title]="choice.description">{{choice.title}}</label>
+
+                    </fieldset>
+                </form>
+
+                <form novalidate *ngIf="prompt.type=='multiselect'">
+                    <fieldset *ngFor="let choice of prompt.choices; let i = index"
+                        [attr.data-disabled]="choice.disabled">
+
+                        <input #input id="choice{{i}}" name="choice" type="radio" [value]="choice.value"
+                            [attr.disabled]="choice.disabled?1:null" (keyup.space)="label.click()"
+                            (keyup.enter)="respond($event,prompt,undefined)" />
+
+                        <label #label (click)="choice.selected=!choice.selected; input.focus();"
+                            [title]="choice.description">
+                            <span class="selected" [attr.data-selected]="!!choice.selected"> &#10003; </span>
+                            <span class="title"> {{choice.title}} </span>
+                        </label>
 
                     </fieldset>
                 </form>
 
                 <form novalidate *ngIf="prompt.type=='text'">
                     <input #input [placeholder]="prompt.initial || ''" type="text" value
-                        (keyup.enter)="respond($event, prompt.name, input.value || prompt.initial)">
+                        (keyup.enter)="respond($event, prompt, input.value || prompt.initial)">
                 </form>
 
                 <form novalidate *ngIf="prompt.type=='confirm' || prompt.type=='toggle'">
                     <fieldset *ngFor="let choice of [true,false]; let i = index">
                         <input id="choice{{i}}" name="choice" type="radio" [value]="choice"
-                            (keyup.enter)="respond($event, prompt.name, choice)" />
+                            (keyup.enter)="respond($event, prompt, choice)" />
 
-                        <label (click)="respond($event, prompt.name, choice)" [title]="choice">
+                        <label (click)="respond($event, prompt, choice)" [title]="choice">
                             {{choice && 'yes' || 'no'}}
                         </label>
                     </fieldset>

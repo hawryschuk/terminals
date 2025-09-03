@@ -1,7 +1,7 @@
 import { ChangeDetectorRef, Component, computed, effect, ElementRef, input, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Util } from '@hawryschuk-common/util';
 import { BehaviorSubject } from 'rxjs';
-import { Terminal } from '@hawryschuk-terminal-restapi';
+import { Prompt, Terminal } from '@hawryschuk-terminal-restapi';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { onTerminalUpdated } from './onTerminalUpdated';
@@ -14,11 +14,13 @@ import { onTerminalUpdated } from './onTerminalUpdated';
   imports: [CommonModule, FormsModule]
 })
 export class TerminalComponent {
+  Number = Number;
   @ViewChild('container') private container!: ElementRef;
   terminal = input.required<Terminal>();
   lines: Terminal['buffer'] = [];
 
   constructor(public cd: ChangeDetectorRef) {
+    Object.assign(window, { terminal: this })
     onTerminalUpdated({
       component: this,
       terminal: this.terminal,
@@ -37,18 +39,19 @@ export class TerminalComponent {
     })
   }
 
-  Number = Number;
-
-  respond(event: Event, name: string, value: any) {
+  respond(event: Event, prompt: Prompt, value: any) {
     const inputs = Array.from(document.querySelectorAll('.prompt input:not([disabled])')) as HTMLInputElement[];
     const active = inputs.find(input => input === document.activeElement);
     const handle = [active, active?.form].includes(event.target as any);
+    const item = Util.findWhere(this.terminal().unansweredPrompts, { prompt })!;
+    const index = this.terminal().history.indexOf(item);
+    if (prompt.type === 'multiselect') value ||= prompt.choices!.filter(c => c.selected).map(c => c.value);
     if (event instanceof PointerEvent || handle)
       Util.throttle({
         interval: 500,
         queue: 1,
         resource: 'terminal-respond',
-        block: () => { return this.terminal().respond(value, name); }
+        block: () => { return this.terminal().respond(value, prompt.name, index); }
       });
     event.preventDefault();
     event.stopImmediatePropagation();

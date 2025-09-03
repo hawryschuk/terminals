@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, effect, ElementRef, Input, model, OnDestroy, QueryList, signal, ViewChildren } from '@angular/core';
+import { ChangeDetectorRef, Component, effect, ElementRef, input, Input, model, OnDestroy, QueryList, signal, ViewChildren } from '@angular/core';
 import { Util } from '@hawryschuk-common/util';
 import { ServiceCenter, ServiceCenterClient, Terminal } from '@hawryschuk-terminal-restapi';
 import { CommonModule } from '@angular/common';
@@ -15,6 +15,8 @@ import { onTerminalUpdated } from '../terminal/onTerminalUpdated';
   imports: [CommonModule, FormsModule, ChatComponent, TerminalsComponent]
 })
 export class ServiceCenterComponent {
+
+  displayTerminals = input(false);
 
   constructor(public cd: ChangeDetectorRef) {
     Object.assign(window, { serviceCenterComponent: this });

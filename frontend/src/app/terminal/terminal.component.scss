@@ -83,6 +83,11 @@
                 input::-webkit-inner-spin-button {
                     -webkit-appearance: none;
                 }
+
+                .selected[data-selected=false] {
+                    color: green;
+                    visibility: hidden;
+                }
             }
         }
     }

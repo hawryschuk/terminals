@@ -5,13 +5,11 @@
  * 4) applies service results ( ie: ratings, credits ) */
 
 import { Util } from "@hawryschuk-common/util";
-import { Terminal, TerminalActivity } from "./Terminal";
-import { Mutex } from "@hawryschuk-locking/Mutex";
+import { Terminal } from "./Terminal";
 import { Prompt } from "./Prompt";
 import { Table } from "./Table";
 import { BaseService } from "./BaseService";
 import { Messaging } from "./Messaging";
-import { ServiceCenterClient } from "./ServiceCenterClient";
 import { ServiceRobot } from "./ServiceRobot";
 
 export class ServiceCenter {

@@ -13,6 +13,7 @@ export * from './WebTerminal';
 
 export * from './BaseService';
 export * from './ServiceCenter';
+export * from './ServiceRobot';
 export * from './ServiceCenterClient';
 export * from './Table';
 export * from './User';

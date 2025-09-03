@@ -168,5 +168,5 @@
     </section>
 </div>
 
-<app-terminals [terminals]="terminals()" [terminal]="terminal()"
+<app-terminals *ngIf="displayTerminals()" [terminals]="terminals()" [terminal]="terminal()"
     (terminalChange)="terminal.set($event)"></app-terminals>

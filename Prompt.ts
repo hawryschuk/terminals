@@ -21,7 +21,7 @@ export interface Prompt<T = any> {
     min?: number;
     max?: number;
     initial?: any;
-    choices?: { title: string; value: any; disabled?: boolean; description?: string; }[];
+    choices?: { title: string; value: any; disabled?: boolean; description?: string; selected?: boolean; }[];
     resolved?: T;
     clobber?: boolean;
     timeout?: number;

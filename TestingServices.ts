@@ -23,8 +23,8 @@ export namespace TestingServices {
             const winners = mapped.filter(item => item.distance === mapped[0].distance).map(item => item.seat);
             const losers = this.users.filter(terminal => !winners.includes(terminal));
             await this.broadcast(`Every player has made their guess. The random number was ${random}. The winners are: ${winners.map(w => w.input.Name).join(', ')}`);
-            await this.send('Congratulations! You won!', ...winners);
-            await this.send('Unfortunately, you lost', ...losers);
+            await this.send('Congratulations! You won!', winners);
+            await this.send('Unfortunately, you lost', losers);
             return { winners, losers };
         }
     }
