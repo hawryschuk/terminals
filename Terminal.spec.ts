@@ -1,4 +1,6 @@
 import { Terminal } from './Terminal';
 import { testTerminal } from 'Terminal.spec.exports';
 
-testTerminal(new Terminal);
+describe('Terminal', () => {
+    testTerminal(Promise.resolve(new Terminal));
+});

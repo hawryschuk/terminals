@@ -54,7 +54,7 @@ export class ServiceCenterClient<T = any> {
         const service = Util.findWhere(this.Services || [], { name });
         const Service = new class {
             get Results() { return client.ServiceInstance?.finished?.results; }
-            get Running() { return !!client.Table?.started; }
+            get Running() { return client.Table?.started ? this.Instance : undefined; }
             get Instance() { return client.ServiceInstance; }
             get Won() { return client.Won; }
             get Lost() { return client.Lost; }

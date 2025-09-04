@@ -11,10 +11,8 @@ export abstract class ServiceRobot {
     protected async run() {
         await Util.waitUntil(() => this.client.ServiceInstance || this.terminal.finished);
         while (this.client.ServiceInstance && !this.client.ServiceInstance.finished && !this.terminal.finished) {
-            const { prompts: promptss = {} } = this.terminal;
-            delete promptss.menu;
-            if (Object.entries(promptss).length)
-                await this.handlePrompts(promptss);
+            if (Util.without(Object.keys(this.terminal.prompts), ['menu']).length)
+                await this.handlePrompts(this.terminal.prompts);
             await Util.pause(100);
         }
     }

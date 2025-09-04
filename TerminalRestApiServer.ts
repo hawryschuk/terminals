@@ -1,7 +1,7 @@
 import express from 'express';
-import { Terminal } from './Terminal';
+import { Terminal, TerminalActivity } from './Terminal';
 import { User } from './User';
-import { MemoryStorage, ORM } from '@hawryschuk-crypto';
+import { MemoryStorage, ORM, StorageCache } from '@hawryschuk-crypto';
 import { Mutex } from '@hawryschuk-locking/Mutex';
 import { ServiceCenter } from './ServiceCenter';
 
@@ -34,7 +34,13 @@ export class TerminalRestApiServer {
     static models = { Terminal, User };    // The data models used by this server that are persisted online 
 
     constructor(
-        public dao = new ORM().Register(new MemoryStorage, TerminalRestApiServer.models),
+        // public dao = new ORM().Register(new StorageCache(new MemoryStorage), TerminalRestApiServer.models),
+        // public dao = new ORM().Register(new StorageCache(new MemoryStorage), TerminalRestApiServer.models),
+        public dao = new class {
+            data: any = {};
+            retrieve(k: any, id: string) { return this.data[id] }
+            save(o: Terminal) { return this.data[o.id] = o }
+        },
         public serviceCenter = new ServiceCenter,
     ) { }
 
@@ -125,9 +131,9 @@ export class TerminalRestApiServer {
             await this.atomic(`TerminalServer::Terminal::${terminal_id}`, async () => {
                 const terminal: Terminal = await this.dao.retrieve(Terminal, terminal_id);
                 if (terminal) {
-                    terminal.history.push(req.body);
+                    terminal.put(req.body as any);
                     await terminal.save();
-                    res.status(200).end();
+                    res.status(200).json({ index: terminal.history.length - 1 });
                 } else {
                     res.status(404).json({ error: 'non-existent-terminal' });
                 }
@@ -138,7 +144,8 @@ export class TerminalRestApiServer {
         .delete('/terminal/:terminal_id', async (req, res) => {
             const { terminal_id } = req.params;
             const terminal: Terminal = await this.dao.retrieve(Terminal, terminal_id);
-            await terminal?.delete();
+            terminal?.finish();
+            // await terminal?.delete();
             res.status(!terminal ? 404 : 204).end();
         })
 

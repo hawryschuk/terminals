@@ -1,7 +1,7 @@
 import { Util } from '@hawryschuk-common/util';
 import { Terminal } from './Terminal';
 import { TerminalActivity } from './TerminalActivity';
-import { Prompt } from './Prompt';
+import { Prompt, PromptIndex, PromptResolved } from './Prompt';
 import { MinimalHttpClient } from './MinimalHttpClient';
 import { Mutex } from '@hawryschuk-locking/Mutex';
 import { axiosHttpClient } from './axiosHttpClient';
@@ -67,52 +67,35 @@ export class WebTerminal extends Terminal {
     }
 
     override async prompt<T = any>(prompt: Prompt<T>, waitResult = true) {
-        const { index } = await this.atomic(async () => {
-            const { history: { length } } = this;
-            await this.request({ method: 'put', url: `terminal/${this.id}`, body: { prompt } });
-            return (await Util.waitUntil(() => {
-                if (this.finished) throw new Error('finished');
-                if (this.history.length > length) {
-                    const index = this.history.findIndex((item, index) => index >= length && item.prompt?.name === prompt.name);
-                    if (index >= 0) return { index };
-                }
-                return undefined;
-            }))!;
+        const clobbered = (prompt.clobber || 'resolved' in prompt) && this.prompts[prompt.name];
+        prompt = await this.atomic(async () => {
+            const { index } = await this.request({ method: 'put', url: `terminal/${this.id}`, body: { prompt } });
+            return await Util.waitUntil(() => { return this.history[index]?.prompt! });
         });
+        const result = prompt![PromptResolved]!;
+        return waitResult
+            ? result
+            : { result, clobbered };
 
-        const result = Util
-            .waitUntil(() => {
-                if (this.finished) throw new Error('finished');
-                return 'resolved' in (this.history[index].prompt || {})
-            })
-            .then(() => this.history[index]!.prompt!.resolved)
-        // .then(result => options.choices ? options.choices[result].value : result);
-
-        return waitResult ? await result : { result };
     }
 
     override async respond(value: any, name?: string, index?: number) {
-        return await this.atomic(async () => {
-            const { history: { length } } = this;
-
-            index ??= this.history.findIndex(item => item.prompt && !('resolved' in item.prompt!) && (!name || name == item.prompt!.name));
-            if (!(index >= 0)) throw new Error('not-prompted');
-
-            name ??= this.history[index]?.prompt?.name;
-            if (this.history[index]?.prompt?.name !== name) throw new Error('not-prompted-for-same-name');
-
+        const item = await this.atomic(async () => {
+            if (this.finished) throw new Error('finished')
+            name ||= Object
+                .values(this.prompts)
+                .reduce((all, prompts) => [...all, ...prompts], [])
+                .sort((a, b) => a[PromptIndex]! - b[PromptIndex]!)
+                .shift()
+                ?.name;
+            if (!(name && this.prompts[name])) throw new Error(`unknown-prompt`);
+            index ??= this.prompts[name][0][PromptIndex]!;
+            const item = this.history[index];
+            if ('resolved' in item.prompt!) throw new Error(`already-resolved`);
             await this.request({ method: 'post', url: `terminal/${this.id}/response`, body: { value, index, name } });
-
-            const prompt = await Util.waitUntil(() => {
-                if (this.finished) throw new Error('finished');
-                const { prompt } = this.history[index!];
-                return prompt && 'resolved' in prompt ? prompt : undefined;
-            });
-
-            if (prompt!.resolved !== value) throw new Error('resolved-with-something-else');
-
-            this.notify(index);
+            return item;
         });
+        return await item.prompt![PromptResolved]!;
     }
 
     override async finish() {
@@ -123,22 +106,13 @@ export class WebTerminal extends Terminal {
     /** Synchronize the last activity fetched online into this instance */
     private async synchronize() {
         const { prompted } = this;
-        const before = Util.deepClone(this.history);
-        const index = prompted ? this.history.findIndex(i => i.prompt === prompted) : this.history.length;
-        const after = [
-            ...before.slice(0, index),
-            ...await this
-                .request({ method: 'get', url: `terminal/${this.id}/history?start=${index}` })
-                .catch(e => { this.finish(); throw e; })
-        ];
-        const changed = !Util.equalsDeep(before, after);
-        for (let i = 0; i < after.length; i++) {
-            if (!Util.equalsDeep(before[i], after[i])) {
-                await Object.assign(this, { history: Object.assign([...this.history], { [i]: after[i] }) }).save();
-                this.notify(i);
-            }
+        const index = prompted ? prompted[PromptIndex]! : this.history.length;
+        const items: TerminalActivity[] = await this
+            .request({ method: 'get', url: `terminal/${this.id}/history?start=${index}` })
+            .catch(e => { this.finish(); throw e; });
+        for (let i = 0; i < items.length; i++) {
+            this.put(items[i], index + i);
         }
-        return { changed };
     }
 
 }

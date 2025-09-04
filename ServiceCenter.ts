@@ -426,6 +426,7 @@ export class ServiceCenter {
      * 8) Distribute results
      */
     private async maintain() {
+        const lastMenuPrompt = new WeakMap<Terminal, number>;
         while (!this.finished) {
             for (const terminal of this.terminals) {
                 const { input, prompts } = terminal;
@@ -433,7 +434,7 @@ export class ServiceCenter {
                 /** Step 1 : Provide Name */
                 if (!input.Name && !prompts.name) {
                     const { result } = await terminal.prompt({ type: 'text', name: 'name' }, false);
-                    result.then(async (name: string) => this.Online(terminal, name));
+                    result.then(async (name: string) => { await this.Online(terminal, name); });
                 }
 
                 /** Step 2 :Prompt for a service */
@@ -446,168 +447,170 @@ export class ServiceCenter {
                             .entries(this.registry)
                             .map(([value, { NAME: title, USERS }]) => ({ value, title, USERS }))
                     }, false);
-                    result.then(() => this.JoinedService(terminal));
+                    result.then(async service => { await this.JoinedService(terminal) });
                 }
 
                 /** Step 3 : Repeat through the menu : Chat & Select-Table, Watch | Sit | Stand, Ready / Unready, Use-Service, Leave-Table, Offline */
                 if (input.Name && input.service) {
                     /** Menu */
-                    const prompted = !!prompts.menu;
-                    const choices = () => {
-                        const { input, prompts } = terminal;
-                        const service = this.registry[input.service]!;
-                        const table = Util.findWhere(this.tables, { id: input.table });
-                        const tables = Util.where(this.tables, { service });
-                        const choices: Prompt['choices'] = [
-                            {
-                                title: 'Create Table',
-                                disabled: !!table || !!prompts.seats,
-                                value: async () => { await this.CreateTable(terminal) }
-                            },
-                            {
-                                title: 'Join Table',
-                                disabled: !!table || !tables.length || !!prompts.table || !!prompts.seats,
-                                value: async () => { await this.JoinTable(terminal); }
-                            },
-                            {
-                                title: 'Sit',
-                                disabled: !table || !!input.seat || table.full,
-                                value: async () => { await this.Sat(terminal); }
-                            },
-                            {
-                                title: 'Stand',
-                                disabled: !table || !input.seat || table!.running,
-                                value: async () => { await this.Stand(terminal); }
-                            },
-                            {
-                                title: 'Invite Robot',
-                                disabled: !table || table.full || !service.ROBOT,
-                                value: async () => { await this.InviteRobot(terminal); }
-                            },
-                            {
-                                title: 'Boot Robot',
-                                disabled: !table || table.running || !table.sitting.some(terminal => Util.findWhere(this.robots, { terminal })),
-                                value: async () => { await this.BootRobot(terminal); }
-                            },
-                            {
-                                title: 'Ready',
-                                disabled: !table || !input.seat || !!input.ready,
-                                value: async () => { await this.Ready(terminal); }
-                            },
-                            {
-                                title: 'Unready',
-                                disabled: !table || !!table.running || !input.seat || !input.ready,
-                                value: async () => { await this.Unready(terminal); }
-                            },
-                            {
-                                title: 'Leave Table',
-                                disabled: !table || !!input.seat,
-                                value: async () => { await this.LeaveTable(terminal) }
-                            },
-                            {
-                                title: 'Message Everyone',
-                                disabled: !input.Name || !!prompts.message,
-                                value: async () => {
-                                    const { result } = await terminal.prompt({ type: 'text', name: 'message', clobber: true }, false);
-                                    (async () => {
-                                        if (await result) {
-                                            this.broadcast<Messaging.Chat>({
-                                                type: 'message',
-                                                to: 'everyone',
-                                                from: input.Name,
-                                                message: await result,
-                                                id: '*',
-                                            });
-                                        }
-                                    })();
+                    if (!prompts.menu || (lastMenuPrompt.get(terminal) || 0) < terminal.updated) {
+                        const choices = () => {
+                            const { input, prompts } = terminal;
+                            const service = this.registry[input.service]!;
+                            const table = Util.findWhere(this.tables, { id: input.table });
+                            const tables = Util.where(this.tables, { service });
+                            const choices: Prompt['choices'] = [
+                                {
+                                    title: 'Create Table',
+                                    disabled: !!table || !!prompts.seats,
+                                    value: async () => { await this.CreateTable(terminal) }
                                 },
-                            },
-                            {
-                                title: 'Message Lounge',
-                                disabled: !input.Name || !!prompts.message || !input.service,
-                                value: async () => {
-                                    const { result } = await terminal.prompt({ type: 'text', name: 'message', clobber: true }, false);
-                                    (async () => {
-                                        if (await result) {
-                                            this.broadcast<Messaging.Chat>({
-                                                type: 'message',
-                                                to: 'lounge',
-                                                from: input.Name,
-                                                message: await result,
-                                                id: input.service,
-                                            });
-                                        }
-                                    })();
+                                {
+                                    title: 'Join Table',
+                                    disabled: !!table || !tables.length || !!prompts.table || !!prompts.seats,
+                                    value: async () => { await this.JoinTable(terminal); }
                                 },
-                            },
-                            {
-                                title: 'Message Table',
-                                disabled: !input.Name || !!prompts.message || !input.service || !input.table,
-                                value: async () => {
-                                    const { result } = await terminal.prompt({ type: 'text', name: 'message', clobber: true }, false);
-                                    (async () => {
-                                        if (await result) {
-                                            this.broadcast<Messaging.Chat>({
-                                                type: 'message',
-                                                to: 'table',
-                                                from: input.Name,
-                                                message: await result,
-                                                id: input.table,
-                                            });
-                                        }
-                                    })();
+                                {
+                                    title: 'Sit',
+                                    disabled: !table || !!input.seat || table.full,
+                                    value: async () => { await this.Sat(terminal); }
                                 },
-                            },
-                            {
-                                title: 'Direct Message',
-                                disabled: !input.Name || !!prompts.message || !!prompts.to,
-                                value: async () => {
-                                    const { result: to } = await terminal.prompt({ type: 'text', name: 'to', clobber: true }, false);
-                                    const { result: message } = await terminal.prompt({ type: 'text', name: 'message', clobber: true }, false);
-                                    Promise
-                                        .all([to, message])
-                                        .then(([to, message]) => {
-                                            const recipient = this.users[to];
-                                            const dm: Messaging.Chat = { to: 'direct', type: 'message', from: input.Name, id: to, message };
-                                            if (recipient && message) {
-                                                terminal.send(dm);
-                                                recipient.terminal.send(dm);
-                                            } else {
-                                                terminal.send({ type: 'error', message: 'unknown-recipient' });
+                                {
+                                    title: 'Stand',
+                                    disabled: !table || !input.seat || table!.running,
+                                    value: async () => { await this.Stand(terminal); }
+                                },
+                                {
+                                    title: 'Invite Robot',
+                                    disabled: !table || table.full || !service.ROBOT,
+                                    value: async () => { await this.InviteRobot(terminal); }
+                                },
+                                {
+                                    title: 'Boot Robot',
+                                    disabled: !table || table.running || !table.sitting.some(terminal => Util.findWhere(this.robots, { terminal })),
+                                    value: async () => { await this.BootRobot(terminal); }
+                                },
+                                {
+                                    title: 'Ready',
+                                    disabled: !table || !input.seat || !!input.ready,
+                                    value: async () => { await this.Ready(terminal); }
+                                },
+                                {
+                                    title: 'Unready',
+                                    disabled: !table || !!table.running || !input.seat || !input.ready,
+                                    value: async () => { await this.Unready(terminal); }
+                                },
+                                {
+                                    title: 'Leave Table',
+                                    disabled: !table || !!input.seat,
+                                    value: async () => { await this.LeaveTable(terminal) }
+                                },
+                                {
+                                    title: 'Message Everyone',
+                                    disabled: !input.Name || !!prompts.message,
+                                    value: async () => {
+                                        const { result } = await terminal.prompt({ type: 'text', name: 'message', clobber: true }, false);
+                                        (async () => {
+                                            if (await result) {
+                                                this.broadcast<Messaging.Chat>({
+                                                    type: 'message',
+                                                    to: 'everyone',
+                                                    from: input.Name,
+                                                    message: await result,
+                                                    id: '*',
+                                                });
                                             }
-                                        });
+                                        })();
+                                    },
+                                },
+                                {
+                                    title: 'Message Lounge',
+                                    disabled: !input.Name || !!prompts.message || !input.service,
+                                    value: async () => {
+                                        const { result } = await terminal.prompt({ type: 'text', name: 'message', clobber: true }, false);
+                                        (async () => {
+                                            if (await result) {
+                                                this.broadcast<Messaging.Chat>({
+                                                    type: 'message',
+                                                    to: 'lounge',
+                                                    from: input.Name,
+                                                    message: await result,
+                                                    id: input.service,
+                                                });
+                                            }
+                                        })();
+                                    },
+                                },
+                                {
+                                    title: 'Message Table',
+                                    disabled: !input.Name || !!prompts.message || !input.service || !input.table,
+                                    value: async () => {
+                                        const { result } = await terminal.prompt({ type: 'text', name: 'message', clobber: true }, false);
+                                        (async () => {
+                                            if (await result) {
+                                                this.broadcast<Messaging.Chat>({
+                                                    type: 'message',
+                                                    to: 'table',
+                                                    from: input.Name,
+                                                    message: await result,
+                                                    id: input.table,
+                                                });
+                                            }
+                                        })();
+                                    },
+                                },
+                                {
+                                    title: 'Direct Message',
+                                    disabled: !input.Name || !!prompts.message || !!prompts.to,
+                                    value: async () => {
+                                        const { result: to } = await terminal.prompt({ type: 'text', name: 'to', clobber: true }, false);
+                                        const { result: message } = await terminal.prompt({ type: 'text', name: 'message', clobber: true }, false);
+                                        Promise
+                                            .all([to, message])
+                                            .then(([to, message]) => {
+                                                const recipient = this.users[to];
+                                                const dm: Messaging.Chat = { to: 'direct', type: 'message', from: input.Name, id: to, message };
+                                                if (recipient && message) {
+                                                    terminal.send(dm);
+                                                    recipient.terminal.send(dm);
+                                                } else {
+                                                    terminal.send({ type: 'error', message: 'unknown-recipient' });
+                                                }
+                                            });
+                                    }
+                                },
+                                {
+                                    title: 'Leave Service',
+                                    value: () => this.LeaveService(terminal)
+                                },
+                                {
+                                    title: 'Offline',
+                                    value: () => this.Offline(terminal)
+                                },
+                                {
+                                    title: 'Refresh',
+                                    value: async () => { }
                                 }
-                            },
-                            {
-                                title: 'Leave Service',
-                                value: () => this.LeaveService(terminal)
-                            },
-                            {
-                                title: 'Offline',
-                                value: () => this.Offline(terminal)
-                            },
-                            {
-                                title: 'Refresh',
-                                value: async () => { }
-                            }
-                        ];
+                            ];
 
-                        return choices;
-                    };
+                            return choices;
+                        };
+                        const { result, clobbered } = await terminal.prompt({
+                            type: 'select',
+                            name: 'menu',
+                            choices: choices()!.map(choice => ({ ...choice, value: choice.title })),
+                            clobber: true,
+                        }, false);
 
-                    const { result, clobbered } = await terminal.prompt({
-                        type: 'select',
-                        name: 'menu',
-                        choices: choices()!.map(choice => ({ ...choice, value: choice.title })),
-                        clobber: true,
-                    }, false);
+                        lastMenuPrompt.set(terminal, terminal.updated);
 
-                    /** Perform the menu action once */
-                    if (!clobbered)
-                        result.then(async (title: string) => {
-                            const choice = Util.findWhere(choices()!, { title });
-                            if (!prompted && choice && !choice.disabled) await choice.value();
-                        });
+                        /** Perform the menu action once */
+                        if (!clobbered)
+                            result.then(async (title: string) => {
+                                const choice = Util.findWhere(choices(), { title });
+                                if (!choice?.disabled) await choice?.value();
+                            });
+                    }
                 }
             }
             await Util.pause(100);

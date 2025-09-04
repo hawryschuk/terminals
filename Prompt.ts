@@ -1,3 +1,6 @@
+export const PromptResolved = Symbol.for('promise');
+export const PromptIndex = Symbol.for('index');
+
 export type PromptType =
     | "text"
     | "number"
@@ -25,4 +28,9 @@ export interface Prompt<T = any> {
     resolved?: T;
     clobber?: boolean;
     timeout?: number;
+
+    updated?: number;
+    timeResolved?: number;
+    [PromptResolved]?: Promise<T>;
+    [PromptIndex]?: number;
 }

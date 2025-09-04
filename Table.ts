@@ -22,6 +22,7 @@ export class Table<T extends BaseService> {
         return this
             .terminals
             .map(terminal => ({ terminal, seat: terminal.input.seat }))
+            .filter(i => i.seat)
             .sort((a, b) => a.seat - b.seat)
             .map(i => i.terminal);
     }

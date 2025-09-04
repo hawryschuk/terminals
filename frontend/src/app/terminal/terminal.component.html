@@ -1,11 +1,13 @@
 <section class="container" #container>
     <div id="stdout">
-        <div *ngFor="let line of lines" [class]="line.type">{{line.data}}</div>
+        <div *ngFor="let line of terminal().history" [class]="line.prompt ? 'stdin' : 'stdout'">
+            {{ terminal().toString(line) }}
+        </div>
     </div>
 
     <div id="prompts">
-        <ng-container *ngFor="let item of terminal().unansweredPrompts; let index = index">
-            <div class="prompt" *ngIf="item.prompt as prompt" [attr.data-index]="index">
+        <ng-container *ngFor="let item of terminal().history; let index = index">
+            <div class="prompt" *ngIf="!item.prompt?.timeResolved && item.prompt as prompt" [attr.data-index]="index">
                 <div class="message">
                     <span> {{ prompt.message || prompt.name }} </span>
                 </div>
