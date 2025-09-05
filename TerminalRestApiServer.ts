@@ -1,11 +1,10 @@
 import express from 'express';
-import { BaseTerminal, Terminal, TerminalActivity } from './Terminal';
+import { Terminal } from './Terminal';
 import { User } from './User';
-import { MemoryStorage, ORM, StorageCache } from '@hawryschuk-crypto';
+import { MemoryStorage, ORM } from '@hawryschuk-crypto';
 import { Mutex } from '@hawryschuk-locking/Mutex';
 import { ServiceCenter } from './ServiceCenter';
 import { IStorage } from '@hawryschuk-crypto/IStorage';
-import { PromptResolved } from 'Prompt';
 
 // export const atomic = (resource: string, block: any) => Mutex.getInstance({ TableName: 'test', resource }).use({ block });
 

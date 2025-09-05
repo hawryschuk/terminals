@@ -1,9 +1,9 @@
 import { Util } from "@hawryschuk-common/util";
-import { MinimalHttpClient } from "./MinimalHttpClient";
+import { MinimalHttpClient } from "@hawryschuk-common/MinimalHttpClient";
 import { Messaging } from "./Messaging";
 import { Terminal, TerminalActivity } from "./Terminal";
 import { WebTerminal } from "./WebTerminal";
-import { CachedWrapper } from "./CachedWrapper";
+import { CachedWrapper } from "@hawryschuk-common/CachedWrapper";
 
 /** Service Center Client : Facilitates the operation of a Service Center : Connects via supplying either :
  * A) BASEURI to a remote Service Center

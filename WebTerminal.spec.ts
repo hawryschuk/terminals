@@ -1,9 +1,7 @@
-import chai from 'chai';
-import chaiHttp from 'chai-http'; chai.use(chaiHttp);
-import { WebTerminal } from './WebTerminal';
-import { chaiExpressHttpClient } from './chaiExpressHttpClient';
+import { chaiExpressHttpClient } from '@hawryschuk-common/chaiExpressHttpClient';
 import { TerminalRestApiServer } from './TerminalRestApiServer';
 import { testTerminal } from './Terminal.spec.exports';
+import { WebTerminal } from './WebTerminal';
 
 export const server = new TerminalRestApiServer();
 WebTerminal.httpClient = chaiExpressHttpClient(server.expressApp);

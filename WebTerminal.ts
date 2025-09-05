@@ -1,10 +1,10 @@
+import { MinimalHttpClient } from '@hawryschuk-common/MinimalHttpClient';
+import { axiosHttpClient } from '@hawryschuk-common/axiosHttpClient';
 import { Util } from '@hawryschuk-common/util';
 import { Terminal } from './Terminal';
 import { TerminalActivity } from './TerminalActivity';
 import { Prompt, PromptIndex, PromptResolved } from './Prompt';
-import { MinimalHttpClient } from './MinimalHttpClient';
 import { Mutex } from '@hawryschuk-locking/Mutex';
-import { axiosHttpClient } from './axiosHttpClient';
 
 export class WebTerminal extends Terminal {
     static REFRESH = 750;    /** (ms) Frequency to pull updates from the server */
