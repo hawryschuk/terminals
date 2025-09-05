@@ -8,7 +8,18 @@ import { testTerminal } from './Terminal.spec.exports';
 export const server = new TerminalRestApiServer();
 WebTerminal.httpClient = chaiExpressHttpClient(server.expressApp);
 WebTerminal.REFRESH = 10;
+const terminal = WebTerminal.connect();
+
+after(async () => {
+    await (await terminal).finish();
+    server.finish();
+    setTimeout(() => process.exit(), 1000);
+});
+
+before(async () => {
+    await terminal;
+});
 
 describe('WebTerminal', () => {
-    testTerminal(WebTerminal.connect());
+    testTerminal(terminal);
 })

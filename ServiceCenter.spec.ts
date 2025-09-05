@@ -8,7 +8,7 @@ import { ServiceCenterClient } from "./ServiceCenterClient";
 import { TestingServices } from "./TestingServices";
 
 /** Test the service center : 1) Locally, 2) Remote (Terminal Services) */
-for (const type of ['local', 'remote'])
+for (const type of ['local', 'remote'] as string[])
     describe(`Service Center ( Client & Server ): ${type}`, () => {
         let serviceCenter: ServiceCenter,
             client: ServiceCenterClient,

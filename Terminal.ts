@@ -4,6 +4,28 @@ import { Prompt, PromptIndex, PromptResolved } from './Prompt';
 import { TerminalActivity, TO_STRING } from './TerminalActivity';
 export { TerminalActivity } from './TerminalActivity';
 
+export class BaseTerminal<T = any> extends Model {
+    owner?: any;
+    history!: TerminalActivity<T>[];
+    started!: number;
+    finished?: number;
+    autoanswer?: { [promptName: string]: any[] };
+
+    constructor(data: Partial<BaseTerminal> = {}) {
+        const { id = Util.UUID, history = [], autoanswer = {}, started = Date.now() } = data;
+        super({ ...data, id, history, autoanswer, started });
+    }
+
+    async finish() {
+        if (this.finished)
+            return false;
+        else {
+            this.finished = Date.now();
+            await this.save();
+            return true;
+        }
+    }
+}
 
 export const Symbols = {
     SUBSCRIBERS: Symbol.for('subscribers'),
@@ -13,39 +35,12 @@ export const Symbols = {
     TO_STRING
 };
 
-export class Terminal<T = any> extends Model {
-    public owner?: any;
-    public history!: TerminalActivity<T>[];
-    public started!: number;
-    public finished?: Date;
-    public autoanswer?: { [promptName: string]: any[] };
+export class Terminal<T = any> extends BaseTerminal {
 
-    get available() { return !!this.owner && !this.finished; }
-
-    async finish() {
-        this.finished ||= new Date();
-        for (const [name, prompts] of Object.entries(this.prompts)) {
-            for (const prompt of prompts)
-                prompt.resolved = undefined;
-        }
-        await this.notify(this.history.length - 1);
-    }
-
-    constructor({
-        id = Util.UUID,
-        history = [],
-        autoanswer = {},
-        started = Date.now(),
-        ...data
-    }: {
-        id?: string;
-        history?: TerminalActivity[];
-        started?: number;
-        autoanswer?: { [promptName: string]: any[] };
-        owner?: any;
-    } = {}) {
-        super({ ...data, id, history: [], autoanswer, started });
-        history.forEach(item => this.put(item));
+    constructor(data: Partial<BaseTerminal> = {}) {
+        super({ ...data, history: undefined });
+        data.history?.forEach(item => this.put(item));
+        const term = this.constructor === Terminal;
     }
 
     get prompted() { return this.unansweredPrompts[0]?.prompt }
@@ -55,6 +50,12 @@ export class Terminal<T = any> extends Model {
     set updated(t: number) { (this as any)[Symbol.for('updated')] = t; }
     get inputIndexes(): Record<string, number> { return (this as any)[Symbol.for('INPUT_INDEX')] ||= {}; }
     get input(): Record<string, any> { return (this as any)[Symbols.INPUT] ||= {}; }
+
+    async finish() {
+        const result = await super.finish();
+        await this.notify(this.history.length - 1);
+        return result;
+    }
 
     put(item: TerminalActivity, index = this.history.length) {
         const exists = !!this.history[index];
@@ -66,30 +67,36 @@ export class Terminal<T = any> extends Model {
             if (item.prompt) {
                 this.unansweredPrompts.push(item);
                 item.prompt[PromptIndex] = index;
-                item.prompt[PromptResolved] ||= (() => {
-                    // const rando = Util.UUID;
-                    // if (item.prompt.name === 'age') { console.log({ rando }); debugger; }
-                    return Util
-                        .waitUntil(() => 'resolved' in item.prompt! || this.finished)
-                        .then(() => {
-                            if ('resolved' in item.prompt!) {
-                                this.updated = Date.now();
-                                item.prompt!.timeResolved ||= Date.now();
-                                Util.removeElements(this.unansweredPrompts, item);
-                                (this.inputs[item.prompt!.name] ||= []).push(item.prompt!.resolved!);
-                                if (index === this.inputIndexes[item.prompt!.name])
-                                    this.input[item.prompt!.name] = item.prompt!.resolved!;
-                                const prompts = this.prompts[item.prompt!.name];
-                                if (prompts) {
-                                    Util.removeElements(prompts, item.prompt);
-                                    if (prompts.length === 0) { delete this.prompts[item.prompt!.name]; }
-                                    delete item[TO_STRING]; // let it lazy-reload
-                                }
-                                this.notify(index);
-                            }
-                            return item.prompt!.resolved!;
-                        });
-                })();
+                const onResolved = () => {
+                    this.updated = Date.now();
+                    if (!item.prompt!.timeResolved) debugger;
+                    item.prompt!.timeResolved ||= Date.now();
+                    Util.removeElements(this.unansweredPrompts, item);
+                    (this.inputs[item.prompt!.name] ||= []).push(item.prompt!.resolved!);
+                    if (index === this.inputIndexes[item.prompt!.name])
+                        this.input[item.prompt!.name] = item.prompt!.resolved!;
+                    const prompts = this.prompts[item.prompt!.name];
+                    if (prompts) {
+                        Util.removeElements(prompts, item.prompt);
+                        if (prompts.length === 0) { delete this.prompts[item.prompt!.name]; }
+                        delete item[TO_STRING]; // let it lazy-reload
+                    }
+                };
+                item.prompt[PromptResolved] ||= Util
+                    .waitUntil(() => {
+                        return 'resolved' in item.prompt! || this.finished
+                    })
+                    .then(() => {
+                        if ('resolved' in item.prompt! && !this.finished) {
+                            onResolved();
+                            this.notify(index);
+                        }
+                        return item.prompt!.resolved!;
+                    });
+                if ('resolved' in item.prompt) {
+                    item.prompt.timeResolved ||= Date.now();
+                    onResolved();
+                }
             }
         } else {
             item.prompt &&= Object.assign(this.history[index].prompt!, { ...item.prompt, updated: Date.now() });
@@ -211,6 +218,7 @@ export class Terminal<T = any> extends Model {
         /** TODO: Think about sending a Shallow Clone of message , in the case its a mutable object outside of this function call ( by the sender, or the receiver ) */
         if (this.finished) throw new Error('finished');
         this.put({ stdout: Util.shallowClone(message), time: Date.now() });
+        await this.save();
     }
 
     /** Provide answers to multiple prompts which can carry into the future */
@@ -266,6 +274,7 @@ export class Terminal<T = any> extends Model {
         const item = this.history[index];
         if ('resolved' in item.prompt!) throw new Error(`already-resolved`);
         item.prompt!.resolved = value;
+        item.prompt!.timeResolved = Date.now();
         await item.prompt![PromptResolved]!;
         await this.save();
     }

@@ -10,13 +10,21 @@ export const axiosHttpClient = (baseURL: string) => <MinimalHttpClient>(async ({
     headers = {} as { [header: string]: string | string[]; }
 }) => {
     // console.log({ method, url, body, responseType, headers })
-    const response: any = await axios({
+    const { success, error }: any = await axios({
         baseURL,
         method,
         url,
         data: body,
         headers
-    }).catch(error => error.response || error);
-    if (response.status >= 400) throw new Error(Util.safeStringify(response.data?.error || response.data));
-    else return response.data;
+    })
+        .then(success => ({ success }))
+        .catch(error => ({ error }));
+    debugger;
+    if (success?.status >= 400) {
+        debugger;
+        // throw new Error(Util.safeStringify(response.data?.error || response.data));
+    } else if (error) {
+        debugger;
+    } else
+        return success.data;
 });

@@ -9,11 +9,19 @@ export const chaiExpressHttpClient = (expressApp: Express) => <MinimalHttpClient
     responseType = 'json' as 'arraybuffer' | 'blob' | 'text' | 'json',
     headers = {} as { [header: string]: string | string[]; }
 }) => {
-    const request = chai.request(expressApp)[method](`/${url}`).set({ /** 'authorization': app.authenticated?.token || '', */ ...headers }).send(body);
-    const response = await request.catch(error => error.response);
-    if (response.status >= 400) {
-        const message = response.body?.error || response.body?.message || response.error || response.text;
-        throw new Error(message);
+    const x = chai.request(expressApp)[method](`/${url}`)
+        .set({ /** 'authorization': app.authenticated?.token || '', */ ...headers })
+        .send(body);
+    const y = await x
+        .then(response => ({ response }))
+        .catch(error => ({ error })) as any;
+    const { response, error } = y as { response: Awaited<typeof x>; error: any; };
+    const { status } = response || {};
+    if (error) { console.error(error); throw error; }
+    if (status >= 400) {
+        const message = response.body?.error || response.body?.message || (response.body ? status : response.text);
+        const error = Object.assign(new Error(message), response.body || {}, { status });
+        throw error;
     } else {
         return responseType === 'text' ? response.text : response.body;
     }

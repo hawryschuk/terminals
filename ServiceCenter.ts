@@ -434,7 +434,9 @@ export class ServiceCenter {
                 /** Step 1 : Provide Name */
                 if (!input.Name && !prompts.name) {
                     const { result } = await terminal.prompt({ type: 'text', name: 'name' }, false);
-                    result.then(async (name: string) => { await this.Online(terminal, name); });
+                    result.then(async (name: string) => {
+                        await this.Online(terminal, name);
+                    });
                 }
 
                 /** Step 2 :Prompt for a service */
@@ -616,5 +618,4 @@ export class ServiceCenter {
             await Util.pause(100);
         }
     }
-
 }

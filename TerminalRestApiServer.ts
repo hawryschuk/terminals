@@ -1,9 +1,11 @@
 import express from 'express';
-import { Terminal, TerminalActivity } from './Terminal';
+import { BaseTerminal, Terminal, TerminalActivity } from './Terminal';
 import { User } from './User';
 import { MemoryStorage, ORM, StorageCache } from '@hawryschuk-crypto';
 import { Mutex } from '@hawryschuk-locking/Mutex';
 import { ServiceCenter } from './ServiceCenter';
+import { IStorage } from '@hawryschuk-crypto/IStorage';
+import { PromptResolved } from 'Prompt';
 
 // export const atomic = (resource: string, block: any) => Mutex.getInstance({ TableName: 'test', resource }).use({ block });
 
@@ -33,18 +35,31 @@ import { ServiceCenter } from './ServiceCenter';
 export class TerminalRestApiServer {
     static models = { Terminal, User };    // The data models used by this server that are persisted online 
 
-    constructor(
-        // public dao = new ORM().Register(new StorageCache(new MemoryStorage), TerminalRestApiServer.models),
-        // public dao = new ORM().Register(new StorageCache(new MemoryStorage), TerminalRestApiServer.models),
-        public dao = new class {
-            data: any = {};
-            retrieve(k: any, id: string) { return this.data[id] }
-            save(o: Terminal) { return this.data[o.id] = o }
-        },
-        public serviceCenter = new ServiceCenter,
-    ) { }
+    dao!: ORM;
+    storage!: IStorage;
+    serviceCenter!: ServiceCenter;
 
-    private atomic(resource: string, block: any) { return Mutex.getInstance(resource).use({ block }); }
+    constructor(
+        storage = new MemoryStorage,
+        serviceCenter = new ServiceCenter,
+    ) {
+        this.storage = storage;
+        this.serviceCenter = serviceCenter;
+        this.dao = new ORM().Register(storage, TerminalRestApiServer.models);
+    }
+
+    private atomic(block: any, resource = 'api-server') { return Mutex.getInstance(resource).use({ block }); }
+
+    async finish() {
+        this.serviceCenter.finish();
+        for await (const key of this.storage.keys('Terminal/')) {
+            const [, id] = key.split('/');
+            const terminal = await this.dao.retrieve(Terminal, id);
+            if (terminal) {
+                await terminal.finish();
+            }
+        }
+    }
 
     /** Terminal Services : Node-Express REST API App : Deployable to Serverless AWS/Azure/GCP, localhost, and on-prem/co-loc */
     expressApp = express()
@@ -57,42 +72,58 @@ export class TerminalRestApiServer {
 
         /** Connect the service  */
         .get('/service', async (req, res) => {
-            const { id } = req.body;
-            const terminal = await this.dao.retrieve(Terminal, id);
-            if (!this.serviceCenter)
-                res.send(500).json({ error: 'no-service-center' })
-            else if (terminal)
-                await this.serviceCenter!
-                    .join(terminal)
-                    .then(() => res.json({ success: true }))
-                    .catch(e => res.status(500).json({ error: e.message }));
-            else
-                res.status(404);
+            await this.atomic(async () => {
+                const { id } = req.body;
+                const terminal = await this.dao.retrieve(Terminal, id);
+                if (!this.serviceCenter)
+                    res.send(500).json({ error: 'no-service-center' })
+                else if (terminal) {
+                    await this.serviceCenter!
+                        .join(terminal)
+                        .then(() => res.json({ success: true }))
+                        .catch(e => res.status(500).json({ error: e.message }));
+                }
+                else
+                    res.status(404).end();
+            });
         })
 
         /** 1) Create a new terminal : As an externally running application, I want to interface with users online, and will create Terminals to do so */
         .get('/terminal', async (req, res) => {
-            const { owner } = req.body;
-            const terminal = await this.dao.save(new Terminal({ owner }));
-            res.status(200).json(terminal);
+            await this.atomic(async () => {
+                const { owner } = req.body;
+                const terminal = await this.dao.save(new Terminal({ owner }));
+                res.status(200).json(terminal);
+            });
         })
 
         .get('/terminal/:terminal_id', async (req, res) => {
-            const { terminal_id } = req.params;
-            await this.atomic(`TerminalServer::Terminal::${terminal_id}`, async () => {
+            await this.atomic(async () => {
+                const { terminal_id } = req.params;
                 const terminal = await this.dao.retrieve(Terminal, terminal_id);
-                res.status(terminal ? 200 : 404).json(terminal);
+                if (terminal) {
+                    const { finished } = terminal;
+                    if (finished)
+                        res.status(410).json({ finished });
+                    else
+                        res.status(terminal ? 200 : 404).json(terminal);
+                } else
+                    res.status(404).end();
             });
         })
 
         /** 3.2) [OPTIONAL] promptee reads subsequent terminal history after a certain ?start point */
         .get('/terminal/:terminal_id/history', async (req, res) => {
-            const { start = '0' } = req.query as any;
-            const { terminal_id } = req.params;
-            await this.atomic(`TerminalServer::Terminal::${terminal_id}`, async () => {
+            await this.atomic(async () => {
+                const { start = '0' } = req.query as any;
+                const { terminal_id } = req.params;
                 const terminal = await this.dao.retrieve(Terminal, terminal_id);
                 if (terminal) {
-                    res.status(200).json(terminal.history.slice(parseInt(start)));
+                    const { finished } = terminal;
+                    if (finished)
+                        res.status(410).json({ finished });
+                    else
+                        res.status(200).json(terminal.history.slice(parseInt(start)));
                 } else
                     res.status(404).end();
             });
@@ -100,53 +131,65 @@ export class TerminalRestApiServer {
 
         /** Terminal Creator overwrites the history (usually in initialization) */
         .put('/terminal/:terminal_id/history', async (req, res) => {
-            const { terminal_id } = req.params;
-            await this.atomic(`TerminalServer::Terminal::${terminal_id}`, async () => {
-                const terminal: Terminal = await this.dao.retrieve(Terminal, terminal_id);
-                if (terminal) await this.dao.save(Object.assign(terminal, { history: req.body }));
-                res.status(terminal ? 200 : 404).json(terminal);
-            });
+            await this.atomic(async () => {
+                const { terminal_id } = req.params;
+                const terminal = await this.dao.retrieve(Terminal, terminal_id);
+                if (terminal && !terminal.finished) Object.assign(terminal, { history: req.body }).save();
+                res.status(terminal ? terminal.finished ? 410 : 200 : 404).end();
+            })
         })
 
         /** Promptee responds to a prompt */
         .post('/terminal/:terminal_id/response', async (req, res) => {
-            const { terminal_id } = req.params;
-            await this.atomic(`TerminalServer::Terminal::${terminal_id}`, async () => {
-                const terminal: Terminal = await this.dao.retrieve(Terminal, terminal_id);
-                const { index, name, value } = req.body;
-                if (terminal) {
-                    const { error, success } = <any>await terminal.respond(value, name, index).then(success => ({ success })).catch(error => ({ error }));
-                    res.status(error ? 500 : 200).json(error ? { error: error.message } : success);
+            await this.atomic(async () => {
+                const { terminal_id } = req.params;
+                const terminal = await this.dao.retrieve(Terminal, terminal_id);
+                const { index, value } = req.body;
+                const prompt = terminal?.history[index]?.prompt;
+                if (terminal?.finished)
+                    res.status(410).end();
+                else if (prompt) {
+                    if ('resolved' in prompt)
+                        res.status(400).end();
+                    else {
+                        await terminal.respond(value, prompt.name, index);
+                        res.status(200).end();
+                    }
                 } else {
                     res.status(404).end();
                 }
-            }).catch(e => {
-                console.error(e.message);
-            });
+            })
         })
 
-        /** Put to an existing terminal : prompt, stdout */
+        /** Push a new item to an existing terminal : prompt, stdout */
         .put('/terminal/:terminal_id', async (req, res) => {
-            const { terminal_id } = req.params;
-            await this.atomic(`TerminalServer::Terminal::${terminal_id}`, async () => {
-                const terminal: Terminal = await this.dao.retrieve(Terminal, terminal_id);
-                if (terminal) {
-                    terminal.put(req.body as any);
+            await this.atomic(async () => {
+                const { terminal_id } = req.params;
+                const terminal = await this.dao.retrieve(Terminal, terminal_id);
+                if (terminal?.finished)
+                    res.status(410).json({ finished: terminal.finished });
+                else if (terminal) {
+                    terminal.put(req.body);
                     await terminal.save();
                     res.status(200).json({ index: terminal.history.length - 1 });
                 } else {
-                    res.status(404).json({ error: 'non-existent-terminal' });
+                    res.status(404).end();
                 }
-            });
+            })
         })
 
         /** Finish using a terminal */
         .delete('/terminal/:terminal_id', async (req, res) => {
-            const { terminal_id } = req.params;
-            const terminal: Terminal = await this.dao.retrieve(Terminal, terminal_id);
-            terminal?.finish();
-            // await terminal?.delete();
-            res.status(!terminal ? 404 : 204).end();
+            await this.atomic(async () => {
+                const { terminal_id } = req.params;
+                const terminal = await this.dao.retrieve(Terminal, terminal_id);
+                const success = await terminal?.finish();
+                setTimeout(() => terminal?.delete(), 5 * 60_000); // delete in 5 minutes
+                const data = { finished: terminal?.finished, success };
+                res
+                    .status(terminal ? 200 : 404)
+                    .json(data)
+                    .end();
+            })
         })
-
 }

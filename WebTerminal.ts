@@ -26,10 +26,12 @@ export class WebTerminal extends Terminal {
     }
 
     private async maintain() {
-        while (!this.finished) {
-            await Util.pause(this.refresh);
-            await this.synchronize();
-        }
+        try {
+            while (!this.finished) {
+                await Util.pause(this.refresh);
+                await this.synchronize();
+            }
+        } catch (e) { debugger; }
     }
 
     /** WebTerminals synchronize with an online server through REST-API and WebSockets */
@@ -38,10 +40,11 @@ export class WebTerminal extends Terminal {
     public refresh!: number;
 
     get request(): MinimalHttpClient {
-        return this.httpClient
+        const client = this.httpClient
             || this.baseuri && axiosHttpClient(this.baseuri!)
             || WebTerminal.httpClient
-            || undefined
+            || undefined;
+        return client;
     }
 
     constructor({ id, owner, history = [], httpClient, baseuri, refresh = WebTerminal.REFRESH }: {
@@ -59,11 +62,9 @@ export class WebTerminal extends Terminal {
     private atomic<T>(block: () => Promise<T>): Promise<T> { return Mutex.getInstance(`WebTerminal::${this.id}`).use({ block }); }
 
     override async send(stdout: any) {
-        return await this.atomic(async () => {
-            const { history: { length } } = this;
-            await this.request({ method: 'put', url: `terminal/${this.id}`, body: { stdout } });
-            await Util.waitUntil(() => this.history.length > length);
-        });
+        const { history: { length } } = this;
+        await this.request({ method: 'put', url: `terminal/${this.id}`, body: { stdout } });
+        await Util.waitUntil(() => this.history.length > length);
     }
 
     override async prompt<T = any>(prompt: Prompt<T>, waitResult = true) {
@@ -99,8 +100,11 @@ export class WebTerminal extends Terminal {
     }
 
     override async finish() {
-        await super.finish();
-        await this.request({ method: 'delete', url: `terminal/${this.id}` });
+        const R = await this.request({ method: 'delete', url: `terminal/${this.id}` });
+        const { finished, success } = R;
+        if (finished) this.finished = finished;
+        else debugger;
+        return success;
     }
 
     /** Synchronize the last activity fetched online into this instance */
@@ -109,7 +113,10 @@ export class WebTerminal extends Terminal {
         const index = prompted ? prompted[PromptIndex]! : this.history.length;
         const items: TerminalActivity[] = await this
             .request({ method: 'get', url: `terminal/${this.id}/history?start=${index}` })
-            .catch(e => { this.finish(); throw e; });
+            .catch(e => {
+                if (e.finished) { this.finished = e.finished; return []; }
+                else { console.error(e); throw e; }
+            });
         for (let i = 0; i < items.length; i++) {
             this.put(items[i], index + i);
         }
