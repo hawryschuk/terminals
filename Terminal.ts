@@ -40,7 +40,6 @@ export class Terminal<T = any> extends BaseTerminal {
     constructor(data: Partial<BaseTerminal> = {}) {
         super({ ...data, history: undefined });
         data.history?.forEach(item => this.put(item));
-        const term = this.constructor === Terminal;
     }
 
     get prompted() { return this.unansweredPrompts[0]?.prompt }
@@ -120,7 +119,7 @@ export class Terminal<T = any> extends BaseTerminal {
             }
         }
 
-        this.notify(index);
+        return this.notify(index);
     }
 
     toString(item: TerminalActivity) {
@@ -139,7 +138,11 @@ export class Terminal<T = any> extends BaseTerminal {
     }
 
     private get subscribers(): { handler: (index?: number) => any; event?: string; }[] { return (this as any)[Symbols.SUBSCRIBERS] ||= []; }
-    protected notify(index: number) { return Promise.all(this.subscribers.map(s => s.handler(index))); }
+    protected async notify(index: number) {
+        await Promise.all(this.subscribers.map(s =>
+            (async () => { await s.handler(index); })()
+                .catch(e => { console.error(e) })));
+    }
 
     /** Get the answers to the questions prompted 
      * -- Will erase old answers when re-prompted and unresolved
@@ -217,7 +220,7 @@ export class Terminal<T = any> extends BaseTerminal {
     async send<T = any>(message: T) {
         /** TODO: Think about sending a Shallow Clone of message , in the case its a mutable object outside of this function call ( by the sender, or the receiver ) */
         if (this.finished) throw new Error('finished');
-        this.put({ stdout: Util.shallowClone(message), time: Date.now() });
+        await this.put({ stdout: Util.shallowClone(message), time: Date.now() });
         await this.save();
     }
 
@@ -239,7 +242,7 @@ export class Terminal<T = any> extends BaseTerminal {
 
     prompt<T = any>(prompt: Prompt<T>): Promise<T>;
     prompt<T = any>(prompt: Prompt<T>, waitResult: false): Promise<{ result: Promise<T>, clobbered: boolean; }>;
-    prompt<T = any>(prompt: Prompt<T>, waitResult = true) {
+    async prompt<T = any>(prompt: Prompt<T>, waitResult = true) {
         if (this.finished) throw new Error('finished');
         const { prompts } = this;
         const time = Date.now();
@@ -251,14 +254,13 @@ export class Terminal<T = any> extends BaseTerminal {
             for (const index of indexes) this.history[index].prompt!.resolved = undefined;
             if (!Util.equals(this.history[index]!.prompt!, prompt)) {
                 Object.assign(this.history[index]!.prompt!, prompt);
-                this.put(this.history[index], index);
+                await this.put(this.history[index], index);
             }
         } else
-            this.put({ prompt, time });
+            await this.put({ prompt, time });
         const result = prompt[PromptResolved]!;
-        return waitResult
-            ? this.save().then(() => result)
-            : this.save().then(() => ({ result, clobbered }));
+        await this.save();
+        return waitResult ? await result : { result, clobbered };
     }
 
     async respond(value: any, name?: string, index?: number) {

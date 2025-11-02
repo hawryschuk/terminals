@@ -75,7 +75,7 @@ export class WebTerminal extends Terminal {
         });
         const result = prompt![PromptResolved]!;
         return waitResult
-            ? result
+            ? await result
             : { result, clobbered };
 
     }
