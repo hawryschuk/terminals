@@ -2,7 +2,7 @@ import { Model } from '@hawryschuk-crypto/ORM';
 import { Util } from '@hawryschuk-common/util';
 import { Prompt, PromptIndex, PromptResolved } from './Prompt';
 import { TerminalActivity, TO_STRING } from './TerminalActivity';
-export { TerminalActivity } from './TerminalActivity';
+export type { TerminalActivity } from './TerminalActivity';
 
 export class BaseTerminal<T = any> extends Model {
     owner?: any;

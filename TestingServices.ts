@@ -1,5 +1,8 @@
 import { Util } from "@hawryschuk-common/util";
 import { BaseService } from "./BaseService";
+import { ServiceRobot } from "./ServiceRobot";
+import { Terminal } from "./Terminal";
+import { Prompt } from "./Prompt";
 
 /** For testing only */
 export namespace TestingServices {
@@ -8,9 +11,23 @@ export namespace TestingServices {
         static override USERS = 1;
         async start() { return { winners: this.users, losers: [] }; }
     }
+
+    export class GuessingGameRobot extends ServiceRobot {
+        constructor(terminal: Terminal) { super(terminal); }
+        async handlePrompts(prompts: Record<string, Prompt[]>): Promise<void> {
+            const [guess] = prompts.guess || [];
+            if (guess) {
+                const { min, max } = guess;
+                await this.terminal.answer({ guess: Util.random({ min, max }) });
+            }
+        }
+    }
+
+
     export class GuessingGame extends BaseService {
         static override NAME = 'Guessing Game';
         static override USERS = [1, 2];
+        static override ROBOT = GuessingGameRobot;
         async start() {
             const min = 1, max = 10;
             const random = Util.random({ min, max });
