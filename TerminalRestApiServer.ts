@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { RequestHandler, NextFunction, Router, Request, Response, IRoute } from 'express';
 import { Terminal } from './Terminal';
 import { User } from './User';
 import { MemoryStorage, ORM, StorageCache } from '@hawryschuk-crypto';
@@ -33,7 +33,7 @@ import { Util } from '@hawryschuk-common/util';
  * 1) Atomic operations on the persisted-data ( to prevent bugs from write-clobbers )
  * */
 export class TerminalRestApiServer {
-    static models = { Terminal, User };    // The data models used by this server that are persisted online 
+    static models = { Terminal };    // The data models used by this server that are persisted online 
 
     constructor(
         public storage: IStorage = new MemoryStorage,
@@ -55,12 +55,7 @@ export class TerminalRestApiServer {
         }
     }
 
-    /** Terminal Services : Node-Express REST API App : Deployable to Serverless AWS/Azure/GCP, localhost, and on-prem/co-loc */
-    expressApp = express()
-        .use(require('cors')({ origin: true }))
-        .use(require('body-parser').json())
-        .use(async (req, res, next) => { res.append('x-terminal-services', '1.0.0'); next(); })
-
+    router = Router()
         /** Connect the service  */
         .get('/service', async (req, res) => {
             await this.atomic(async () => {
@@ -183,4 +178,12 @@ export class TerminalRestApiServer {
                     .end();
             })
         })
+
+
+    /** Terminal Services : Node-Express REST API App : Deployable to Serverless AWS/Azure/GCP, localhost, and on-prem/co-loc */
+    expressApp = express()
+        .use(require('cors')({ origin: true }))
+        .use(require('body-parser').json())
+        .use(async (req, res, next) => { res.append('x-terminal-services', '1.0.0'); next(); })
+        .use(this.router)
 }
