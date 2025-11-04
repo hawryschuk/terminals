@@ -1,11 +1,10 @@
-import express, { RequestHandler, NextFunction, Router, Request, Response, IRoute } from 'express';
+import express, { Router } from 'express';
+import 'express-async-errors';
 import { Terminal } from './Terminal';
-import { User } from './User';
-import { MemoryStorage, ORM, StorageCache } from '@hawryschuk-crypto';
+import { MemoryStorage, ORM } from '@hawryschuk-crypto';
 import { Mutex } from '@hawryschuk-locking/Mutex';
 import { ServiceCenter } from './ServiceCenter';
 import { IStorage } from '@hawryschuk-crypto/IStorage';
-import { Util } from '@hawryschuk-common/util';
 
 // export const atomic = (resource: string, block: any) => Mutex.getInstance({ TableName: 'test', resource }).use({ block });
 
@@ -34,6 +33,11 @@ import { Util } from '@hawryschuk-common/util';
  * */
 export class TerminalRestApiServer {
     static models = { Terminal };    // The data models used by this server that are persisted online 
+
+    static async clearTerminals(storage: IStorage) {
+        for await (const key of storage.keys('Terminal/'))
+            console.log('removing key', key), await storage.removeItem(key);
+    }
 
     constructor(
         public storage: IStorage = new MemoryStorage,

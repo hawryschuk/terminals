@@ -34,6 +34,15 @@ export class ServiceCenter {
     readonly terminals: Array<Terminal> = [];
     async join(terminal: Terminal) {
         if (this.terminals.includes(terminal)) throw new Error('already-joined');
+
+        /** Clear the terminal of prompts and old values */
+        for (const [k, v] of Object.entries(terminal.prompts))
+            for (const item of v)
+                await terminal.respond(undefined, k);
+        for (const [k, v] of Object.entries(terminal.input))
+            if (v !== undefined)
+                await terminal.prompt({ type: "number", name: k, resolved: undefined, clobber: true });
+
         this.terminals.push(terminal);
         await terminal.send<Messaging.Service.List>({
             type: 'services',
