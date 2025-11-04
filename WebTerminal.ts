@@ -18,8 +18,11 @@ export class WebTerminal extends Terminal {
         httpClient?: MinimalHttpClient;
         refresh?: number;
     } = {}) {
+        const url = id ? `terminal/${id}` : 'terminal';
         const terminal = new WebTerminal({ id, baseuri, httpClient, refresh });
-        Object.assign(terminal, await terminal.request({ method: 'get', url: `terminal`, body: { id, owner } }));
+        const online = await terminal.request({ method: 'get', url, body: { owner } });
+        Object.assign(terminal, { ...online, history: [] });
+        for (const item of online.history) await terminal.put(item);
         await terminal.synchronize();
         terminal.maintain();
         return terminal;

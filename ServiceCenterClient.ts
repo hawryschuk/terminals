@@ -11,13 +11,14 @@ import { CachedWrapper } from "@hawryschuk-common/CachedWrapper";
 */
 export class ServiceCenterClient<T = any> {
 
-    static async create({ terminal, httpClient, baseuri }: { terminal?: Terminal; httpClient?: MinimalHttpClient; baseuri?: string; } = {}) {
+    static async create({ terminal, owner, httpClient, baseuri }: { terminal?: Terminal; httpClient?: MinimalHttpClient; baseuri?: string; owner?: string; } = {}) {
         terminal ||= (baseuri || httpClient)
-            ? await WebTerminal.connect({ baseuri, httpClient })
+            ? await WebTerminal.connect({ baseuri, httpClient, owner })
             : new Terminal;
-        if (terminal instanceof WebTerminal) {
-            await terminal.request({ method: 'get', url: 'service', body: { id: terminal.id } });
-        }
+        if (terminal instanceof WebTerminal)
+            await terminal
+                .request({ method: 'get', url: 'service', body: { id: terminal.id } })
+                .catch(e => { if (e.message !== 'already-joined') throw e; });
         return ServiceCenterClient.getInstance(terminal!);
     }
 

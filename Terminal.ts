@@ -98,6 +98,10 @@ export class Terminal<T = any> extends BaseTerminal {
                 }
             }
         } else {
+            const withoutUpdated = (x: any) => { x = Util.shallowClone(x); Util.safely(() => x.prompt.updated = undefined); return x };
+            const changed = !Util.equals(withoutUpdated(this.history[index]), withoutUpdated(item));
+            if (!changed) return;
+            if (!(this.history[index].prompt && item.prompt)) throw new Error('only-prompts-can-be-overwritten');
             item.prompt &&= Object.assign(this.history[index].prompt!, { ...item.prompt, updated: Date.now() });
             item = Object.assign(this.history[index], item);
         }
