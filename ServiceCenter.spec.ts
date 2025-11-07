@@ -21,9 +21,9 @@ for (const type of ['local', 'remote'] as string[])
             const httpClient = type == 'remote' ? WebTerminal.httpClient : undefined;
             server.serviceCenter.finish();
             serviceCenter = server.serviceCenter = new ServiceCenter().register(TestingServices.BrowniePoints, TestingServices.GuessingGame);
-            client = await ServiceCenterClient.create({ httpClient });
-            client2 = await ServiceCenterClient.create({ httpClient });
-            client3 = await ServiceCenterClient.create({ httpClient });
+            client = await ServiceCenterClient.create({ httpClient, baseuri: '/' });
+            client2 = await ServiceCenterClient.create({ httpClient, baseuri: '/' });
+            client3 = await ServiceCenterClient.create({ httpClient, baseuri: '/' });
             terminal = client.terminal;
             terminal2 = client2.terminal;
             terminal3 = client3.terminal;

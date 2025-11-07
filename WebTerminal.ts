@@ -34,7 +34,10 @@ export class WebTerminal extends Terminal {
                 await Util.pause(this.refresh);
                 await this.synchronize();
             }
-        } catch (e) { debugger; }
+        } catch (e) {
+            console.error(e);
+            await super.finish();
+        }
     }
 
     /** WebTerminals synchronize with an online server through REST-API and WebSockets */
@@ -93,9 +96,10 @@ export class WebTerminal extends Terminal {
                 .shift()
                 ?.name;
             if (!(name && this.prompts[name])) throw new Error(`unknown-prompt`);
-            index ??= this.prompts[name][0][PromptIndex]!;
+            index ??= this.prompts[name].find(p => !p.timeResolved)?.[PromptIndex]!;
             const item = this.history[index];
-            if ('resolved' in item.prompt!) throw new Error(`already-resolved`);
+            if (!item?.prompt) debugger;
+            if (item.prompt?.timeResolved) throw new Error(`already-resolved`);
             await this.request({ method: 'post', url: `terminal/${this.id}/response`, body: { value, index, name } });
             return item;
         });

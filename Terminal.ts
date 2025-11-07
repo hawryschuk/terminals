@@ -222,8 +222,7 @@ export class Terminal<T = any> extends BaseTerminal {
     // }
 
     async send<T = any>(message: T) {
-        /** TODO: Think about sending a Shallow Clone of message , in the case its a mutable object outside of this function call ( by the sender, or the receiver ) */
-        if (this.finished) throw new Error('finished');
+        if (this.finished) return;
         await this.put({ stdout: Util.shallowClone(message), time: Date.now() });
         await this.save();
     }
@@ -232,7 +231,7 @@ export class Terminal<T = any> extends BaseTerminal {
     async answer(answers: any) {
         answers = Util.deepClone(answers);
         await Util.waitUntil(async () => {
-            if (this.finished) throw new Error('finished');
+            if (this.finished) return 1;
             for (const [key, val] of Object.entries(answers))
                 if (this.prompts[key]) {
                     await this.respond(val instanceof Array ? val.shift() : val, key);
@@ -247,7 +246,7 @@ export class Terminal<T = any> extends BaseTerminal {
     prompt<T = any>(prompt: Prompt<T>): Promise<T>;
     prompt<T = any>(prompt: Prompt<T>, waitResult: false): Promise<{ result: Promise<T>, clobbered: boolean; }>;
     async prompt<T = any>(prompt: Prompt<T>, waitResult = true) {
-        if (this.finished) throw new Error('finished');
+        if (this.finished) return waitResult ? undefined : {};
         const { prompts } = this;
         const time = Date.now();
         const clobbered = (prompt.clobber || 'resolved' in prompt) && prompts[prompt.name];
@@ -268,7 +267,7 @@ export class Terminal<T = any> extends BaseTerminal {
     }
 
     async respond(value: any, name?: string, index?: number) {
-        if (this.finished) throw new Error('finished')
+        if (this.finished) return;
         name ||= Object
             .values(this.prompts)
             .reduce((all, prompts) => [...all, ...prompts], [])
@@ -276,9 +275,9 @@ export class Terminal<T = any> extends BaseTerminal {
             .shift()
             ?.name;
         if (!(name && this.prompts[name])) throw new Error(`unknown-prompt`);
-        index ??= this.prompts[name][0][PromptIndex]!;
+        index ??= this.prompts[name].find(p => !p.timeResolved)?.[PromptIndex]!;
         const item = this.history[index];
-        if ('resolved' in item.prompt!) throw new Error(`already-resolved`);
+        if (item.prompt?.timeResolved) throw new Error(`already-resolved`);
         item.prompt!.resolved = value;
         item.prompt!.timeResolved = Date.now();
         await item.prompt![PromptResolved]!;

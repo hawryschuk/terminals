@@ -12,7 +12,7 @@ import { CachedWrapper } from "@hawryschuk-common/CachedWrapper";
 export class ServiceCenterClient<T = any> {
 
     static async create({ terminal, owner, httpClient, baseuri }: { terminal?: Terminal; httpClient?: MinimalHttpClient; baseuri?: string; owner?: string; } = {}) {
-        terminal ||= (baseuri || httpClient)
+        terminal ||= (baseuri && httpClient)
             ? await WebTerminal.connect({ baseuri, httpClient, owner })
             : new Terminal;
         if (terminal instanceof WebTerminal)
@@ -373,6 +373,12 @@ export class ServiceCenterClient<T = any> {
         await this.SelectMenu('Leave Table');
         await Util.waitUntil(() => !this.terminal.input.table);
         await Util.waitUntil(() => !this.Table);
+    }
+
+    async LeaveService() {
+        await this.SelectMenu('Leave Service');
+        await Util.waitUntil(() => !this.terminal.input.service);
+        await Util.waitUntil(() => !this.Service);
     }
 
     async JoinTable(id: string) {

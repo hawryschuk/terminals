@@ -19,14 +19,18 @@
         <h3 #section> Username</h3>
         <form class="main" novalidate id="enter-name"
             (ngSubmit)="terminal().respond(name.value,'name'); $event.preventDefault()">
-            <input #name placeholder="Name">
+            <div style="display: flex; flex-direction: row;">
+                <input #name placeholder="Name" name="name" style="flex:1">
+                <button id="submit-name" type="submit">Submit</button>
+            </div>
         </form>
     </section>
 
-    <section id="service-selection" *ngIf="terminal().prompts.service?.[0] as prompt">
+    <section id="service-selection" *ngIf="terminal().prompts.service?.at(-1) as prompt">
         <h3 #section> Services</h3>
         <div class="main">
-            <button *ngFor="let choice of prompt.choices" (click)="terminal().respond(choice.value, 'service')">
+            <button id="select-service-{{choice.value}}" *ngFor="let choice of prompt.choices"
+                (click)="terminal().respond(choice.value, 'service')">
                 {{choice.title}}
             </button>
         </div>
@@ -42,12 +46,20 @@
     <section id="service-lounge" *ngIf="client.Service">
         <h3 #section> Tables</h3>
         <section class="main">
-            <button [disabled]="!!client.User?.seat || !menu.includes('Create Table')" (click)="client.UseNow()">
-                Use Now
-            </button>
+            <div class="buttons" style="display: flex; flex-direction: row;">
+                <button style="flex:1" [disabled]="!!client.User?.seat || !menu.includes('Create Table')" id="use-now"
+                    (click)="client.UseNow()">
+                    Use Now
+                </button>
+                <button style="flex:1" [disabled]="!!client.User?.seat || !!client.User?.table" id="leave-service"
+                    (click)="client.LeaveService()">
+                    Leave Service
+                </button>
+            </div>
 
             <div id="create-table">
-                <button *ngIf="menu.includes('Create Table')" (click)="client.CreateTable()"> Create Table </button>
+                <button *ngIf="menu.includes('Create Table')" (click)="client.CreateTable()" data-click="create-table">
+                    Create Table </button>
                 <div *ngIf="terminal().prompts.seats?.[0] as seats">
                     <ng-container *ngIf="seats.type=='number'">
                         <form #form="ngForm" (ngSubmit)="terminal().respond(form.value.seats,'seats')">
@@ -57,7 +69,8 @@
 
                     <ng-container *ngIf="seats.choices">
                         <h4> # Seats </h4>
-                        <button *ngFor="let seat of seats.choices" (click)="terminal().respond(seat.value,'seats')">
+                        <button *ngFor="let seat of seats.choices" (click)="terminal().respond(seat.value,'seats')"
+                            id="select-seat-{{seat.value}}">
                             {{seat.value}}
                         </button>
                     </ng-container>
@@ -125,9 +138,12 @@
             <div *ngIf="menu">
                 <button [disabled]="!menu.includes('Invite Robot')" (click)="client.InviteRobot()"> Invite Robot
                 </button>
-                <button [disabled]="!menu.includes('Stand')" (click)="client.Stand()"> Stand </button>
-                <button [disabled]="!menu.includes('Ready')" (click)="client.Ready()"> Ready </button>
-                <button [disabled]="!menu.includes('Leave Table')" (click)="client.LeaveTable()"> Leave Table </button>
+                <button [disabled]="!menu.includes('Stand')" (click)="client.Stand()" data-click="stand"> Stand
+                </button>
+                <button [disabled]="!menu.includes('Ready')" (click)="client.Ready()" data-click="ready"> Ready
+                </button>
+                <button [disabled]="!menu.includes('Leave Table')" (click)="client.LeaveTable()"
+                    data-click="leave-table"> Leave Table </button>
             </div>
 
             <ol id="seats">
@@ -137,7 +153,8 @@
                     <span class="name" *ngIf="name"> {{ name }} </span>
                     <button *ngIf="name && menu.includes('Boot Robot') && client.Table!.robots.includes(name!)"
                         (click)="client.BootRobot(index+1)"> Boot </button>
-                    <button *ngIf="!name && menu.includes('Sit')" (click)="client.Sit()"> Sit </button>
+                    <button *ngIf="!name && menu.includes('Sit')" (click)="client.Sit()" id="sit-at-seat-{{index+1}}">
+                        Sit </button>
                     <button *ngIf="menu.includes('Stand') && client.User!.seat==(index+1)" (click)="client.Stand()">
                         Stand </button>
                 </li>
@@ -161,12 +178,12 @@
     <section id="direct-messages" *ngIf="client.Messages.Direct">
         <h3 #section>Direct Messages</h3>
 
-        <app-chat [selectedUser]="selectedUser" (selectedUserChange)="initiateDirectMessaging($event)" (send)="client.Message.Direct({ to: selectedUser!, message: $event})"
-            [users]="client.Users.DirectMessaged" type="direct"
-            [messages]="selectedUser ? client.Messages.Direct[selectedUser] : []"></app-chat>
+        <app-chat [selectedUser]="selectedUser" (selectedUserChange)="initiateDirectMessaging($event)"
+            (send)="client.Message.Direct({ to: selectedUser!, message: $event})" [users]="client.Users.DirectMessaged"
+            type="direct" [messages]="selectedUser ? client.Messages.Direct[selectedUser] : []"></app-chat>
 
     </section>
 </div>
 
-<app-terminals [terminals]="terminals()" [terminal]="terminal()"
+<app-terminals [terminals]="terminals()" [terminal]="terminal()" *ngIf="displayTerminals()"
     (terminalChange)="terminal.set($event)"></app-terminals>

@@ -1,10 +1,11 @@
 import express, { Router } from 'express';
 import 'express-async-errors';
 import { Terminal } from './Terminal';
-import { MemoryStorage, ORM } from '@hawryschuk-crypto';
+import { MemoryStorage, Observable, ORM } from '@hawryschuk-crypto';
 import { Mutex } from '@hawryschuk-locking/Mutex';
 import { ServiceCenter } from './ServiceCenter';
 import { IStorage } from '@hawryschuk-crypto/IStorage';
+import { Util } from '@hawryschuk-common/util';
 
 // export const atomic = (resource: string, block: any) => Mutex.getInstance({ TableName: 'test', resource }).use({ block });
 
@@ -45,8 +46,9 @@ export class TerminalRestApiServer {
     ) { }
 
     dao: ORM = new ORM().Register(this.storage, TerminalRestApiServer.models);
+    checked = new WeakMap<Terminal, number>();
 
-    private atomic(block: any) { return this.mutex.use({ block }); }; private mutex = new Mutex;
+    private atomic<T>(block: () => Promise<T>) { return this.mutex.use({ block }); }; private mutex = new Mutex;
 
     async finish() {
         this.serviceCenter.finish();
@@ -80,11 +82,12 @@ export class TerminalRestApiServer {
 
         /** 1) Create a new terminal : As an externally running application, I want to interface with users online, and will create Terminals to do so */
         .get('/terminal', async (req, res) => {
-            await this.atomic(async () => {
-                const { owner } = req.query;
-                const terminal = await this.dao.save(new Terminal({ owner }));
-                res.status(200).json(terminal);
-            });
+            const { owner } = req.query;
+            const terminal = await this.atomic(() => this.dao.save(new Terminal({ owner })));
+            this.checked.set(terminal, Date.now());
+            Util.waitUntil(() => Date.now() - this.checked.get(terminal)! > 5 * 60_000, { pause: 1000 })
+                .then(() => Promise.all([this.dao.delete(terminal), terminal.finish()]));
+            res.status(200).json(terminal);
         })
 
         .get('/terminal/:terminal_id', async (req, res) => {
@@ -112,8 +115,10 @@ export class TerminalRestApiServer {
                     const { finished } = terminal;
                     if (finished)
                         res.status(410).json({ finished });
-                    else
+                    else {
+                        this.checked.set(terminal, Date.now());
                         res.status(200).json(terminal.history.slice(parseInt(start)));
+                    }
                 } else
                     res.status(404).end();
             });

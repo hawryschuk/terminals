@@ -81,6 +81,15 @@ export class ServiceCenter {
                 };
             })
         });
+
+        const subscription = terminal.subscribe({
+            handler: () => {
+                if (terminal.finished) {
+                    subscription.unsubscribe();
+                    this.Offline(terminal);
+                }
+            }
+        });
     }
 
     finished?: Date;
@@ -134,6 +143,7 @@ export class ServiceCenter {
         const { Name } = terminal.input;
         if (service) {
             await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'left-service', name: Name, id: service.NAME });
+            await terminal.prompt({ type: "text", name: 'service', resolved: undefined, clobber: true });
             delete this.users[Name].service;
             return true;
         } else {
@@ -156,7 +166,6 @@ export class ServiceCenter {
             return true;
         } else if (!input.service) {
             await terminal.send({ type: 'error', message: 'service-undefined' });
-            debugger;
         }
         return false;
     }
@@ -209,13 +218,16 @@ export class ServiceCenter {
 
     async Offline(terminal: Terminal) {
         const { Name: name, seat, ready, table, service } = terminal.input;
-        if (ready) await this.Unready(terminal);
-        if (seat) await this.Stand(terminal);
-        if (table) await this.LeaveTable(terminal);
-        if (service) await this.LeaveService(terminal);
-        await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'offline', name });
-        Util.removeElements(this.terminals, terminal);
-        delete this.users[name];
+        if (this.terminals.includes(terminal)) {
+            if (ready) await this.Unready(terminal);
+            if (seat) await this.Stand(terminal);
+            if (table) await this.LeaveTable(terminal);
+            if (service) await this.LeaveService(terminal);
+            await this.broadcast<Messaging.User.Status>({ type: 'user-status', status: 'offline', name });
+            Util.removeElements(this.terminals, terminal);
+            delete this.users[name];
+            await terminal.finish();
+        }
     }
 
     async Online(terminal: Terminal, name: string) {
@@ -444,7 +456,7 @@ export class ServiceCenter {
                 if (!input.Name && !prompts.name) {
                     const { result } = await terminal.prompt({ type: 'text', name: 'name' }, false);
                     result.then(async (name: string) => {
-                        await this.Online(terminal, name);
+                        await this.Online(terminal, name).catch(console.error);
                     });
                 }
 
@@ -458,7 +470,7 @@ export class ServiceCenter {
                             .entries(this.registry)
                             .map(([value, { NAME: title, USERS }]) => ({ value, title, USERS }))
                     }, false);
-                    result.then(async service => { await this.JoinedService(terminal) });
+                    result.then(async service => { service && await this.JoinedService(terminal) });
                 }
 
                 /** Step 3 : Repeat through the menu : Chat & Select-Table, Watch | Sit | Stand, Ready / Unready, Use-Service, Leave-Table, Offline */
